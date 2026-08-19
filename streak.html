@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>read.in — Streak</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div id="setup-screen" class="setup-screen">
+  <div class="setup-card">
+    <img src="favicon.png" class="setup-icon" alt="" />
+    <h1 id="setup-title">Set up your library</h1>
+    <p id="setup-text">Loading…</p>
+    <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
+    <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
+    <div id="setup-error" class="setup-warning hidden" role="alert"></div>
+    <p class="setup-note">read.in only works in Chrome or Edge, and stores everything locally — nothing ever leaves your computer.</p>
+  </div>
+</div>
+
+<div id="app-shell" class="hidden">
+  <header class="app-header">
+    <a href="index.html" class="brand">
+      <img src="favicon.png" alt="" />
+      <img src="assets/wordmark.png" alt="read.in" class="wordmark" />
+    </a>
+    <nav class="header-nav">
+      <a href="index.html" class="nav-link">Library</a>
+      <a href="streak.html" class="nav-link is-active">Streak</a>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <div class="page-title-row">
+      <div>
+        <h1 class="page-title">Your streak</h1>
+        <p class="page-subtitle">Every day you logged a page, mapped out like a shelf of receipts.</p>
+      </div>
+    </div>
+
+    <section class="stat-row">
+      <div class="stat-block">
+        <p class="stat-sentence">
+          Reading for <span class="stat-num" id="streak-days-num">0</span>
+          <span id="streak-days-word">days</span><span class="stat-today-dot hidden" id="streak-today-dot" title="You read today"></span>
+        </p>
+        <p class="stat-caption">Current streak</p>
+      </div>
+      <div class="stat-block">
+        <p class="stat-sentence">Longest streak: <span class="stat-num" id="longest-streak-num">0</span></p>
+        <p class="stat-caption">All-time best</p>
+      </div>
+    </section>
+
+    <section class="heatmap-section">
+      <h2 class="section-title">Reading map</h2>
+      <div class="heatmap-scroll">
+        <div class="heatmap-inner">
+          <div class="heatmap-months" id="heatmap-months"></div>
+          <div class="heatmap-body">
+            <div class="heatmap-weekday-labels">
+              <span></span>
+              <span>Mon</span>
+              <span></span>
+              <span>Wed</span>
+              <span></span>
+              <span>Fri</span>
+              <span></span>
+            </div>
+            <div class="heatmap-grid" id="heatmap-grid"></div>
+          </div>
+        </div>
+      </div>
+      <div class="heatmap-legend">
+        <span>Less</span>
+        <span class="heatmap-cell"></span>
+        <span class="heatmap-cell lvl-1"></span>
+        <span class="heatmap-cell lvl-2"></span>
+        <span class="heatmap-cell lvl-3"></span>
+        <span class="heatmap-cell lvl-4"></span>
+        <span>More</span>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Log</h2>
+      <div class="log-list" id="log-list"></div>
+      <p class="empty-note hidden" id="log-list-empty">No logs yet — go log a few pages on your shelf.</p>
+    </section>
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="js/fs.js"></script>
+<script src="js/store.js"></script>
+<script src="js/boot.js"></script>
+<script src="js/streak.js"></script>
+</body>
+</html>

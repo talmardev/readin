@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>read.in</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div id="setup-screen" class="setup-screen">
+  <div class="setup-card">
+    <img src="favicon.png" class="setup-icon" alt="" />
+    <h1 id="setup-title">Set up your library</h1>
+    <p id="setup-text">Loading…</p>
+    <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
+    <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
+    <div id="setup-error" class="setup-warning hidden" role="alert"></div>
+    <p class="setup-note">read.in only works in Chrome or Edge, and stores everything locally — nothing ever leaves your computer.</p>
+  </div>
+</div>
+
+<div id="app-shell" class="hidden">
+  <header class="app-header">
+    <a href="index.html" class="brand">
+      <img src="favicon.png" alt="" />
+      <img src="assets/wordmark.png" alt="read.in" class="wordmark" />
+    </a>
+    <nav class="header-nav">
+      <a href="index.html" class="nav-link is-active">Library</a>
+      <a href="streak.html" class="nav-link">Streak</a>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <div class="page-title-row">
+      <div>
+        <h1 class="page-title">Your shelf</h1>
+        <p class="page-subtitle" id="shelf-subtitle"></p>
+      </div>
+    </div>
+
+    <div class="book-grid" id="book-grid">
+      <button type="button" class="book-card add-book-card" id="add-book-card">
+        <div class="book-cover-wrap">
+          <span class="plus-icon">+</span>
+        </div>
+        <div class="book-meta">
+          <p class="book-title">Add book</p>
+        </div>
+      </button>
+    </div>
+  </main>
+</div>
+
+<div id="book-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="book-modal-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="book-modal-title">Add book</h2>
+      <button type="button" class="modal-close" id="book-modal-close" aria-label="Close">&times;</button>
+    </div>
+
+    <form id="book-form" novalidate>
+      <div class="cover-upload">
+        <div class="cover-drop" id="cover-drop" role="button" tabindex="0" aria-label="Choose a cover image">
+          <span id="cover-drop-placeholder">No cover</span>
+          <img id="cover-preview" class="hidden" alt="" />
+        </div>
+        <div class="cover-upload-text">
+          Upload a cover image (optional).
+          <br />
+          <button type="button" id="cover-remove-btn" class="hidden">Remove cover</button>
+        </div>
+        <input type="file" id="cover-input" accept="image/*" class="hidden" />
+      </div>
+
+      <div class="field">
+        <label for="book-title-input">Title</label>
+        <input type="text" id="book-title-input" required maxlength="200" placeholder="The Left Hand of Darkness" />
+      </div>
+      <div class="field">
+        <label for="book-author-input">Author</label>
+        <input type="text" id="book-author-input" maxlength="200" placeholder="Ursula K. Le Guin" />
+      </div>
+      <div class="field">
+        <label for="book-pages-input">Total pages</label>
+        <input type="number" id="book-pages-input" min="1" step="1" required placeholder="304" />
+      </div>
+      <p class="error-text" id="book-form-error"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="book-modal-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="book-modal-submit">Add book</button>
+      </div>
+    </form>
+
+    <div class="modal-footer-row hidden" id="book-modal-delete-row">
+      <button type="button" class="btn btn-danger" id="book-delete-btn">Delete book</button>
+    </div>
+  </div>
+</div>
+
+<div id="log-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="log-modal-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="log-modal-title">Log reading</h2>
+      <button type="button" class="modal-close" id="log-modal-close" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="log-modal-book" id="log-modal-book"></div>
+
+    <form id="log-form" novalidate>
+      <div class="field">
+        <label for="log-pages-input">Pages read</label>
+        <input type="number" id="log-pages-input" min="1" step="1" required placeholder="25" />
+        <p class="hint">How many pages since your last log — not the page you're on.</p>
+      </div>
+      <div class="field" id="log-date-field">
+        <label for="log-date-input">Date</label>
+        <input type="date" id="log-date-input" />
+      </div>
+      <div class="field">
+        <label class="checkbox-row" for="log-past-checkbox">
+          <input type="checkbox" id="log-past-checkbox" />
+          <span class="checkbox-label">Past read (before I started tracking — no exact date)</span>
+        </label>
+      </div>
+      <p class="error-text" id="log-form-error"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="log-modal-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save log</button>
+      </div>
+    </form>
+
+    <div class="recent-logs" id="recent-logs-section">
+      <h3>Recent logs</h3>
+      <div id="recent-logs-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="js/fs.js"></script>
+<script src="js/store.js"></script>
+<script src="js/boot.js"></script>
+<script src="js/library.js"></script>
+</body>
+</html>
