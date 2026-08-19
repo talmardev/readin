@@ -1,9 +1,9 @@
-gi<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>read.in — Streak</title>
+<title>read.in — Stats</title>
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -27,17 +27,20 @@ gi<!doctype html>
       <img src="favicon.png" alt="" />
       <img src="assets/wordmark.png" alt="read.in" class="wordmark" />
     </a>
-    <nav class="header-nav">
-      <a href="index.html" class="nav-link">Library</a>
-      <a href="streak.html" class="nav-link is-active">Streak</a>
-      <a href="settings.html" class="nav-link">Settings</a>
-    </nav>
+    <div class="header-right">
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link">Library</a>
+        <a href="streak.html" class="nav-link is-active">Stats</a>
+        <a href="settings.html" class="nav-link">Settings</a>
+      </nav>
+      <a href="read.html" class="btn-read">Read</a>
+    </div>
   </header>
 
   <main class="page-shell">
     <div class="page-title-row">
       <div>
-        <h1 class="page-title">Your streak</h1>
+        <h1 class="page-title">Your stats</h1>
         <p class="page-subtitle">Every day you logged a page, mapped out like a shelf of receipts.</p>
       </div>
     </div>
@@ -53,6 +56,25 @@ gi<!doctype html>
       <div class="stat-block">
         <p class="stat-sentence">Longest streak: <span class="stat-num" id="longest-streak-num">0</span></p>
         <p class="stat-caption">All-time best</p>
+      </div>
+    </section>
+
+    <section class="mini-stat-row">
+      <div class="mini-stat-tile">
+        <p class="mini-stat-num" id="mini-total-pages">0</p>
+        <p class="mini-stat-caption">Pages read</p>
+      </div>
+      <div class="mini-stat-tile">
+        <p class="mini-stat-num" id="mini-books-read">0</p>
+        <p class="mini-stat-caption">Books read</p>
+      </div>
+      <div class="mini-stat-tile">
+        <p class="mini-stat-num" id="mini-avg-days">—</p>
+        <p class="mini-stat-caption">Avg. days to finish</p>
+      </div>
+      <div class="mini-stat-tile">
+        <p class="mini-stat-num" id="mini-avg-pages-day">—</p>
+        <p class="mini-stat-caption">Avg. pages/day</p>
       </div>
     </section>
 

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>read.in — Read</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div id="setup-screen" class="setup-screen">
+  <div class="setup-card">
+    <img src="favicon.png" class="setup-icon" alt="" />
+    <h1 id="setup-title">Loading read.in…</h1>
+    <p id="setup-text">One moment.</p>
+    <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
+    <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
+    <div id="setup-error" class="setup-warning hidden" role="alert"></div>
+    <p class="setup-note">read.in only works in Chrome or Edge, and stores everything locally — nothing ever leaves your computer.</p>
+  </div>
+</div>
+
+<div id="app-shell" class="hidden">
+  <header class="app-header">
+    <a href="index.html" class="brand">
+      <img src="favicon.png" alt="" />
+      <img src="assets/wordmark.png" alt="read.in" class="wordmark" />
+    </a>
+    <div class="header-right">
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link">Library</a>
+        <a href="streak.html" class="nav-link">Stats</a>
+        <a href="settings.html" class="nav-link">Settings</a>
+      </nav>
+      <a href="read.html" class="btn-read">Read</a>
+    </div>
+  </header>
+
+  <main class="page-shell read-shell">
+
+    <section id="read-step-book" class="read-step">
+      <div class="page-title-row">
+        <div>
+          <h1 class="page-title">What are you reading?</h1>
+          <p class="page-subtitle">Pick a book to start a timed session.</p>
+        </div>
+      </div>
+      <div id="read-book-groups"></div>
+      <p class="empty-note hidden" id="read-no-books">Add a book to your shelf first.</p>
+    </section>
+
+    <section id="read-step-duration" class="read-step hidden">
+      <button type="button" class="btn btn-text" id="read-duration-back">&larr; Choose a different book</button>
+      <div class="log-modal-book" id="duration-book"></div>
+      <h2 class="section-title">How long are you reading?</h2>
+      <div class="duration-chips" id="duration-chips">
+        <button type="button" class="duration-chip" data-minutes="15">15 min</button>
+        <button type="button" class="duration-chip" data-minutes="25">25 min</button>
+        <button type="button" class="duration-chip" data-minutes="30">30 min</button>
+        <button type="button" class="duration-chip" data-minutes="45">45 min</button>
+        <button type="button" class="duration-chip" data-minutes="60">60 min</button>
+      </div>
+      <div class="field duration-custom-field">
+        <label for="duration-custom-input">Or a custom number of minutes</label>
+        <input type="number" id="duration-custom-input" min="1" step="1" placeholder="20" />
+      </div>
+      <p class="error-text" id="duration-form-error"></p>
+      <button type="button" class="btn btn-primary btn-block" id="read-start-btn">Start reading</button>
+    </section>
+
+    <section id="read-step-timer" class="read-step hidden">
+      <div class="log-modal-book timer-book" id="timer-book"></div>
+      <div class="timer-ring-wrap" id="timer-ring-wrap">
+        <svg class="timer-ring" viewBox="0 0 220 220">
+          <defs>
+            <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0B6E12" />
+              <stop offset="100%" stop-color="#3CDB2E" />
+            </linearGradient>
+          </defs>
+          <circle class="timer-ring-track" cx="110" cy="110" r="100" />
+          <circle class="timer-ring-progress" id="timer-ring-progress" cx="110" cy="110" r="100" />
+        </svg>
+        <div class="timer-ring-center">
+          <p class="timer-time" id="timer-time">25:00</p>
+          <p class="timer-state" id="timer-state">Reading</p>
+        </div>
+      </div>
+      <div class="timer-actions">
+        <button type="button" class="btn btn-secondary" id="timer-pause-btn">Bathroom Break</button>
+        <button type="button" class="btn btn-text" id="timer-end-btn">End Earlier</button>
+      </div>
+    </section>
+
+    <section id="read-step-finished" class="read-step hidden">
+      <div class="finished-card">
+        <img id="finished-cover-img" class="finished-cover hidden" alt="" />
+        <div id="finished-cover-placeholder" class="finished-cover-placeholder hidden"></div>
+        <h1 class="finished-title" id="finished-title"></h1>
+        <p class="finished-author" id="finished-author"></p>
+
+        <div class="finished-stats">
+          <div>
+            <p class="finished-stat-num" id="finished-time-read">—</p>
+            <p class="finished-stat-label">Time read</p>
+          </div>
+          <div>
+            <p class="finished-stat-num" id="finished-start-time">—</p>
+            <p class="finished-stat-label">Started</p>
+          </div>
+          <div>
+            <p class="finished-stat-num" id="finished-end-time">—</p>
+            <p class="finished-stat-label">Ended</p>
+          </div>
+        </div>
+
+        <form id="finished-form" novalidate>
+          <div class="field">
+            <label for="finished-pages-input">Pages read</label>
+            <input type="number" id="finished-pages-input" min="1" step="1" required placeholder="18" />
+          </div>
+          <p class="error-text" id="finished-form-error"></p>
+          <button type="submit" class="btn btn-primary btn-block" id="finished-save-btn">Save session</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="read-step-saved" class="read-step hidden">
+      <div class="finished-card saved-card">
+        <span class="stat-today-dot"></span>
+        <h1 class="page-title">Nice reading!</h1>
+        <p class="page-subtitle" id="saved-summary"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="saved-read-again-btn">Read another session</button>
+          <a href="index.html" class="btn btn-primary">Back to Library</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="js/fs.js"></script>
+<script src="js/store.js"></script>
+<script src="js/boot.js"></script>
+<script src="js/read.js"></script>
+</body>
+</html>

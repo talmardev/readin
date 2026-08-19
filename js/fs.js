@@ -10,6 +10,7 @@ RI.fs = (function () {
   const STORE_NAME = "handles";
   const HANDLE_KEY = "root";
   const LIBRARY_FILE = "library.json";
+  const READS_FILE = "reads.json";
 
   function isSupported() {
     return typeof window.showDirectoryPicker === "function";
@@ -118,6 +119,29 @@ RI.fs = (function () {
     await writable.close();
   }
 
+  // reads.json — one row per timed Read-page session, separate from library.json
+  async function readReads(dataHandle) {
+    let fileHandle;
+    try {
+      fileHandle = await dataHandle.getFileHandle(READS_FILE, { create: false });
+    } catch (err) {
+      if (err && err.name === "NotFoundError") return { reads: [] };
+      throw err;
+    }
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    if (!text.trim()) return { reads: [] };
+    const parsed = JSON.parse(text);
+    return { reads: Array.isArray(parsed.reads) ? parsed.reads : [] };
+  }
+
+  async function writeReads(dataHandle, readsData) {
+    const fileHandle = await dataHandle.getFileHandle(READS_FILE, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(readsData, null, 2));
+    await writable.close();
+  }
+
   function extensionFromFile(file) {
     const dotIdx = file.name.lastIndexOf(".");
     if (dotIdx > 0 && dotIdx < file.name.length - 1) {
@@ -175,6 +199,8 @@ RI.fs = (function () {
     ensureDataDirs,
     readLibrary,
     writeLibrary,
+    readReads,
+    writeReads,
     saveCover,
     deleteCover,
     readCoverAsURL,

@@ -18,6 +18,10 @@
   const streakDaysWord = document.getElementById("streak-days-word");
   const streakTodayDot = document.getElementById("streak-today-dot");
   const longestStreakNum = document.getElementById("longest-streak-num");
+  const miniTotalPages = document.getElementById("mini-total-pages");
+  const miniBooksRead = document.getElementById("mini-books-read");
+  const miniAvgDays = document.getElementById("mini-avg-days");
+  const miniAvgPagesDay = document.getElementById("mini-avg-pages-day");
   const heatmapMonths = document.getElementById("heatmap-months");
   const heatmapGrid = document.getElementById("heatmap-grid");
   const logList = document.getElementById("log-list");
@@ -117,6 +121,15 @@
     const today = store.todayISODate();
     const readToday = store.datedLogDateSet(ctx.library).has(today);
     streakTodayDot.classList.toggle("hidden", !(current > 0 && readToday));
+
+    miniTotalPages.textContent = store.totalPagesRead(ctx.library).toLocaleString();
+    miniBooksRead.textContent = store.booksReadCount(ctx.library);
+
+    const avgDays = store.averageDaysToComplete(ctx.library);
+    miniAvgDays.textContent = avgDays === null ? "—" : Math.round(avgDays * 10) / 10;
+
+    const avgPagesDay = store.averagePagesPerDay(ctx.library);
+    miniAvgPagesDay.textContent = avgPagesDay === null ? "—" : Math.round(avgPagesDay * 10) / 10;
   }
 
   function coverPlaceholder(book) {

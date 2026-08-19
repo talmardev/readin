@@ -348,6 +348,83 @@ RI.store = (function () {
     return map;
   }
 
+  function totalPagesRead(library) {
+    return library.logs.reduce((sum, l) => sum + (Number(l.pagesRead) || 0), 0);
+  }
+
+  function isBookFinished(library, book) {
+    return remainingPages(library, book) <= 0 && progressForBook(library, book).pagesRead > 0;
+  }
+
+  function booksReadCount(library) {
+    return library.books.filter((b) => isBookFinished(library, b)).length;
+  }
+
+  // days from a finished book's first dated log to its last — past-read logs
+  // (no date) can't anchor a span, so books finished only via past reads are
+  // excluded rather than counted as "0 days"
+  function averageDaysToComplete(library) {
+    const spans = [];
+    library.books.forEach((book) => {
+      if (!isBookFinished(library, book)) return;
+      const dates = logsForBook(library, book.id)
+        .filter((l) => !l.isPastRead && l.date)
+        .map((l) => l.date);
+      if (dates.length === 0) return;
+      const min = dates.reduce((a, c) => (c < a ? c : a));
+      const max = dates.reduce((a, c) => (c > a ? c : a));
+      const days = Math.round((parseISODate(max) - parseISODate(min)) / 86400000) + 1;
+      spans.push(days);
+    });
+    if (spans.length === 0) return null;
+    return spans.reduce((a, c) => a + c, 0) / spans.length;
+  }
+
+  // mean pages logged on days that had at least one dated log (not a
+  // pace-over-all-calendar-days figure)
+  function averagePagesPerDay(library) {
+    const map = pagesPerDay(library);
+    if (map.size === 0) return null;
+    let total = 0;
+    map.forEach((v) => (total += v));
+    return total / map.size;
+  }
+
+  // for the Read-timer book picker: in-progress books first, then unstarted
+  // (0 pages read), then finished books last — each tier keeps the library's
+  // usual most-recent-activity ordering
+  function groupBooksForReadPicker(library) {
+    const sorted = sortedBooksForLibrary(library);
+    const inProgress = [];
+    const notStarted = [];
+    const finished = [];
+    sorted.forEach((book) => {
+      const progress = progressForBook(library, book);
+      if (progress.pagesRead <= 0) notStarted.push(book);
+      else if (isBookFinished(library, book)) finished.push(book);
+      else inProgress.push(book);
+    });
+    return { inProgress, notStarted, finished };
+  }
+
+  function createReadSession(readsData, session) {
+    const entry = {
+      id: generateId(),
+      bookId: session.bookId,
+      logId: session.logId,
+      plannedMinutes: Math.max(1, Math.round(Number(session.plannedMinutes) || 0)),
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      pausedSeconds: Math.max(0, Math.round(Number(session.pausedSeconds) || 0)),
+      activeSeconds: Math.max(0, Math.round(Number(session.activeSeconds) || 0)),
+      endedEarly: !!session.endedEarly,
+      pagesRead: Math.max(0, Math.round(Number(session.pagesRead) || 0)),
+      createdAt: new Date().toISOString(),
+    };
+    readsData.reads.push(entry);
+    return entry;
+  }
+
   return {
     generateId,
     toISODate,
@@ -372,11 +449,18 @@ RI.store = (function () {
 
     sortedBooksForLibrary,
     sortedLogsNewestFirst,
+    groupBooksForReadPicker,
 
     currentStreak,
     longestStreak,
     pagesPerDay,
     datedLogDateSet,
+    totalPagesRead,
+    isBookFinished,
+    booksReadCount,
+    averageDaysToComplete,
+    averagePagesPerDay,
+    createReadSession,
 
     defaultCategories,
     createDefaultLibrary,
