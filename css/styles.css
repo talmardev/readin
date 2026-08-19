@@ -118,6 +118,7 @@ a {
   height: 20px;
   width: auto;
   display: block;
+  border-radius: 0;
 }
 
 .header-nav {
@@ -304,6 +305,17 @@ input[disabled] {
   color: var(--danger);
   margin-top: 6px;
   min-height: 1em;
+}
+
+.finished-note {
+  margin: 4px 0 18px;
+  background: var(--surface-2);
+  color: var(--green-deep);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .checkbox-row {

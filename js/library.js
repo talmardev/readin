@@ -51,8 +51,10 @@
 
   const logModalOverlay = document.getElementById("log-modal-overlay");
   const logModalBookEl = document.getElementById("log-modal-book");
+  const logFinishedNote = document.getElementById("log-finished-note");
   const logForm = document.getElementById("log-form");
   const logPagesInput = document.getElementById("log-pages-input");
+  const logPagesHint = document.getElementById("log-pages-hint");
   const logDateField = document.getElementById("log-date-field");
   const logDateInput = document.getElementById("log-date-input");
   const logPastCheckbox = document.getElementById("log-past-checkbox");
@@ -626,7 +628,10 @@
         await persist();
         renderRecentLogs(bookId);
         const book = store.getBookById(ctx.library, bookId);
-        if (book) await renderLogModalBookInfo(book);
+        if (book) {
+          await renderLogModalBookInfo(book);
+          applyRemainingPagesState(book);
+        }
         await renderGrid();
       });
 
@@ -635,6 +640,19 @@
       row.appendChild(removeBtn);
       recentLogsList.appendChild(row);
     });
+  }
+
+  // toggles the log form vs. the "finished" note based on pages left to read
+  function applyRemainingPagesState(book) {
+    const remaining = store.remainingPages(ctx.library, book);
+    const finished = remaining <= 0;
+    logFinishedNote.classList.toggle("hidden", !finished);
+    logForm.classList.toggle("hidden", finished);
+    if (!finished) {
+      logPagesInput.max = remaining;
+      logPagesHint.textContent = `How many pages since your last log — not the page you're on. ${remaining} page${remaining === 1 ? "" : "s"} left.`;
+    }
+    return { remaining, finished };
   }
 
   async function openLogModal(bookId) {
@@ -649,9 +667,10 @@
     logDateInput.disabled = false;
     logPagesInput.value = "";
     await renderLogModalBookInfo(book);
+    const { finished } = applyRemainingPagesState(book);
     renderRecentLogs(bookId);
     showOverlay(logModalOverlay);
-    logPagesInput.focus();
+    if (!finished) logPagesInput.focus();
   }
 
   function closeLogModal() {
@@ -683,6 +702,16 @@
       logFormError.textContent = "Enter at least 1 page.";
       return;
     }
+    const bookBefore = store.getBookById(ctx.library, logModalBookId);
+    const remaining = bookBefore ? store.remainingPages(ctx.library, bookBefore) : 0;
+    if (remaining <= 0) {
+      logFormError.textContent = "This book is already finished.";
+      return;
+    }
+    if (pages > remaining) {
+      logFormError.textContent = `Only ${remaining} page${remaining === 1 ? "" : "s"} left in this book.`;
+      return;
+    }
     const isPastRead = logPastCheckbox.checked;
     const date = isPastRead ? null : logDateInput.value || store.todayISODate();
     if (!isPastRead && date > store.todayISODate()) {
@@ -696,13 +725,14 @@
       await persist();
       const book = store.getBookById(ctx.library, logModalBookId);
       await renderLogModalBookInfo(book);
+      const { finished } = applyRemainingPagesState(book);
       renderRecentLogs(logModalBookId);
       logPagesInput.value = "";
       logPastCheckbox.checked = false;
       logDateField.classList.remove("hidden");
       logDateInput.disabled = false;
       logDateInput.value = store.todayISODate();
-      logPagesInput.focus();
+      if (!finished) logPagesInput.focus();
       await renderGrid();
     } catch (err) {
       console.error(err);

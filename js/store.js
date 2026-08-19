@@ -252,6 +252,12 @@ RI.store = (function () {
     return { pagesRead, totalPages, percent };
   }
 
+  // pages still loggable before the book hits 100% — never negative
+  function remainingPages(library, book) {
+    const progress = progressForBook(library, book);
+    return Math.max(0, progress.totalPages - progress.pagesRead);
+  }
+
   function hasLogToday(library, bookId) {
     const today = todayISODate();
     return logsForBook(library, bookId).some((l) => !l.isPastRead && l.date === today);
@@ -361,6 +367,7 @@ RI.store = (function () {
 
     pagesReadForBook,
     progressForBook,
+    remainingPages,
     hasLogToday,
 
     sortedBooksForLibrary,
