@@ -11,10 +11,12 @@
 
   let ctx = null;
   let gridCoverUrls = new Map();
+  let selectedCategoryFilter = null;
 
   let editingBookId = null;
   let pendingCoverFile = null;
   let pendingCoverRemoved = false;
+  let pendingOwnership = null;
   let bookModalCoverUrl = null;
 
   let logModalBookId = null;
@@ -23,6 +25,7 @@
   const grid = document.getElementById("book-grid");
   const addBookCard = document.getElementById("add-book-card");
   const shelfSubtitle = document.getElementById("shelf-subtitle");
+  const categoryFilterRow = document.getElementById("category-filter-row");
 
   const bookModalOverlay = document.getElementById("book-modal-overlay");
   const bookModalTitle = document.getElementById("book-modal-title");
@@ -30,6 +33,9 @@
   const bookTitleInput = document.getElementById("book-title-input");
   const bookAuthorInput = document.getElementById("book-author-input");
   const bookPagesInput = document.getElementById("book-pages-input");
+  const bookIsbnInput = document.getElementById("book-isbn-input");
+  const ownershipToggle = document.getElementById("ownership-toggle");
+  const bookCategoryChecklist = document.getElementById("book-category-checklist");
   const bookFormError = document.getElementById("book-form-error");
   const bookModalSubmit = document.getElementById("book-modal-submit");
   const bookModalCancel = document.getElementById("book-modal-cancel");
@@ -75,8 +81,50 @@
     return fs.readCoverAsURL(ctx.coversHandle, book.coverFile);
   }
 
+  function renderCategoryFilterRow() {
+    const used = store.categoriesInUse(ctx.library);
+    categoryFilterRow.innerHTML = "";
+
+    if (used.length === 0) {
+      categoryFilterRow.classList.add("hidden");
+      selectedCategoryFilter = null;
+      return;
+    }
+    if (selectedCategoryFilter && !used.some((c) => c.id === selectedCategoryFilter)) {
+      selectedCategoryFilter = null;
+    }
+    categoryFilterRow.classList.remove("hidden");
+
+    const allChip = document.createElement("button");
+    allChip.type = "button";
+    allChip.className = "filter-chip" + (selectedCategoryFilter === null ? " is-active" : "");
+    allChip.textContent = "All";
+    allChip.addEventListener("click", () => {
+      selectedCategoryFilter = null;
+      renderGrid();
+    });
+    categoryFilterRow.appendChild(allChip);
+
+    used.forEach((category) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "filter-chip" + (selectedCategoryFilter === category.id ? " is-active" : "");
+      chip.textContent = category.name;
+      chip.addEventListener("click", () => {
+        selectedCategoryFilter = selectedCategoryFilter === category.id ? null : category.id;
+        renderGrid();
+      });
+      categoryFilterRow.appendChild(chip);
+    });
+  }
+
   async function renderGrid() {
-    const books = store.sortedBooksForLibrary(ctx.library);
+    renderCategoryFilterRow();
+
+    const allBooks = store.sortedBooksForLibrary(ctx.library);
+    const books = selectedCategoryFilter
+      ? allBooks.filter((b) => store.bookHasCategory(b, selectedCategoryFilter))
+      : allBooks;
 
     gridCoverUrls.forEach((url) => URL.revokeObjectURL(url));
     gridCoverUrls = new Map();
@@ -88,12 +136,14 @@
     if (books.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty-state";
-      empty.textContent = "Your shelf is empty. Add your first book to start tracking.";
+      empty.textContent = selectedCategoryFilter
+        ? "No books tagged with this category yet."
+        : "Your shelf is empty. Add your first book to start tracking.";
       grid.appendChild(empty);
     }
 
-    shelfSubtitle.textContent = books.length
-      ? `${books.length} book${books.length === 1 ? "" : "s"} on your shelf`
+    shelfSubtitle.textContent = allBooks.length
+      ? `${allBooks.length} book${allBooks.length === 1 ? "" : "s"} on your shelf`
       : "";
 
     for (const book of books) {
@@ -140,6 +190,13 @@
     });
     coverWrap.appendChild(editBtn);
 
+    if (book.ownership === "library") {
+      const badge = document.createElement("span");
+      badge.className = "ownership-badge";
+      badge.textContent = "Library";
+      coverWrap.appendChild(badge);
+    }
+
     if (readToday) {
       const dot = document.createElement("span");
       dot.className = "read-today-dot";
@@ -157,6 +214,25 @@
     const authorEl = document.createElement("p");
     authorEl.className = "book-author";
     authorEl.textContent = book.author || "";
+
+    const bookCategories = store.categoriesForBook(ctx.library, book);
+    let tagsEl = null;
+    if (bookCategories.length > 0) {
+      tagsEl = document.createElement("div");
+      tagsEl.className = "category-tags";
+      bookCategories.slice(0, 2).forEach((c) => {
+        const tag = document.createElement("span");
+        tag.className = "category-tag";
+        tag.textContent = c.name;
+        tagsEl.appendChild(tag);
+      });
+      if (bookCategories.length > 2) {
+        const more = document.createElement("span");
+        more.className = "category-tag";
+        more.textContent = `+${bookCategories.length - 2}`;
+        tagsEl.appendChild(more);
+      }
+    }
 
     const track = document.createElement("div");
     track.className = "progress-track";
@@ -177,6 +253,7 @@
 
     meta.appendChild(titleEl);
     meta.appendChild(authorEl);
+    if (tagsEl) meta.appendChild(tagsEl);
     meta.appendChild(track);
     meta.appendChild(stats);
 
@@ -255,6 +332,62 @@
     }
   }
 
+  function setOwnership(value) {
+    pendingOwnership = value;
+    Array.from(ownershipToggle.querySelectorAll(".ownership-option")).forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.ownership === value);
+    });
+  }
+
+  ownershipToggle.addEventListener("click", (e) => {
+    const btn = e.target.closest(".ownership-option");
+    if (!btn) return;
+    setOwnership(pendingOwnership === btn.dataset.ownership ? null : btn.dataset.ownership);
+  });
+
+  function renderCategoryChecklist(selectedIds) {
+    const selected = new Set(selectedIds || []);
+    const groups = store.groupedCategories(ctx.library);
+    bookCategoryChecklist.innerHTML = "";
+
+    [["Non-Fiction", groups["Non-Fiction"]], ["Fiction", groups.Fiction], ["Custom", groups.Custom]].forEach(
+      ([label, categories]) => {
+        if (categories.length === 0) return;
+        const heading = document.createElement("div");
+        heading.className = "category-group-label";
+        heading.textContent = label;
+        bookCategoryChecklist.appendChild(heading);
+
+        categories.forEach((category) => {
+          const row = document.createElement("label");
+          row.className = "category-check-row";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = category.id;
+          checkbox.checked = selected.has(category.id);
+          const text = document.createElement("span");
+          text.textContent = category.name;
+          row.appendChild(checkbox);
+          row.appendChild(text);
+          bookCategoryChecklist.appendChild(row);
+        });
+      }
+    );
+
+    if (!bookCategoryChecklist.hasChildNodes()) {
+      const note = document.createElement("p");
+      note.className = "no-categories-note";
+      note.textContent = "No categories yet — add some from Settings.";
+      bookCategoryChecklist.appendChild(note);
+    }
+  }
+
+  function selectedCategoryIds() {
+    return Array.from(bookCategoryChecklist.querySelectorAll('input[type="checkbox"]:checked')).map(
+      (cb) => cb.value
+    );
+  }
+
   function openAddBookModal() {
     editingBookId = null;
     pendingCoverFile = null;
@@ -263,6 +396,8 @@
     bookModalSubmit.textContent = "Add book";
     bookForm.reset();
     setCoverPreview(null);
+    setOwnership(null);
+    renderCategoryChecklist([]);
     bookModalDeleteRow.classList.add("hidden");
     bookFormError.textContent = "";
     showOverlay(bookModalOverlay);
@@ -280,8 +415,11 @@
     bookTitleInput.value = book.title;
     bookAuthorInput.value = book.author || "";
     bookPagesInput.value = book.totalPages;
+    bookIsbnInput.value = book.isbn || "";
     const url = await resolveCoverUrl(book);
     setCoverPreview(url);
+    setOwnership(book.ownership || null);
+    renderCategoryChecklist(book.categoryIds);
     bookModalDeleteRow.classList.remove("hidden");
     bookFormError.textContent = "";
     showOverlay(bookModalOverlay);
@@ -296,6 +434,7 @@
     }
     pendingCoverFile = null;
     pendingCoverRemoved = false;
+    pendingOwnership = null;
     coverInput.value = "";
   }
 
@@ -337,6 +476,9 @@
     const title = bookTitleInput.value.trim();
     const author = bookAuthorInput.value.trim();
     const totalPages = Number(bookPagesInput.value);
+    const isbn = bookIsbnInput.value.trim();
+    const ownership = pendingOwnership;
+    const categoryIds = selectedCategoryIds();
 
     if (!title) {
       bookFormError.textContent = "Title is required.";
@@ -362,9 +504,17 @@
           if (oldCover && oldCover !== newPath) await fs.deleteCover(ctx.coversHandle, oldCover);
           store.updateBook(ctx.library, editingBookId, { coverFile: newPath });
         }
-        store.updateBook(ctx.library, editingBookId, { title, author, totalPages });
+        store.updateBook(ctx.library, editingBookId, { title, author, totalPages, isbn, ownership, categoryIds });
       } else {
-        const book = store.createBook(ctx.library, { title, author, totalPages, coverFile: null });
+        const book = store.createBook(ctx.library, {
+          title,
+          author,
+          totalPages,
+          coverFile: null,
+          isbn,
+          ownership,
+          categoryIds,
+        });
         if (pendingCoverFile) {
           const path = await fs.saveCover(ctx.coversHandle, book.id, pendingCoverFile);
           store.updateBook(ctx.library, book.id, { coverFile: path });

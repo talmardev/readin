@@ -10,7 +10,6 @@ RI.fs = (function () {
   const STORE_NAME = "handles";
   const HANDLE_KEY = "root";
   const LIBRARY_FILE = "library.json";
-  const DEFAULT_LIBRARY = { books: [], logs: [] };
 
   function isSupported() {
     return typeof window.showDirectoryPicker === "function";
@@ -88,17 +87,14 @@ RI.fs = (function () {
     return { dataHandle, coversHandle };
   }
 
-  function cloneDefaultLibrary() {
-    return { books: [], logs: [] };
-  }
-
+  // needs RI.store loaded first, for default categories and book shape
   async function readLibrary(dataHandle) {
     let fileHandle;
     try {
       fileHandle = await dataHandle.getFileHandle(LIBRARY_FILE, { create: false });
     } catch (err) {
       if (err && err.name === "NotFoundError") {
-        const fresh = cloneDefaultLibrary();
+        const fresh = RI.store.createDefaultLibrary();
         await writeLibrary(dataHandle, fresh);
         return fresh;
       }
@@ -106,11 +102,12 @@ RI.fs = (function () {
     }
     const file = await fileHandle.getFile();
     const text = await file.text();
-    if (!text.trim()) return cloneDefaultLibrary();
+    if (!text.trim()) return RI.store.createDefaultLibrary();
     const parsed = JSON.parse(text);
     return {
-      books: Array.isArray(parsed.books) ? parsed.books : [],
+      books: Array.isArray(parsed.books) ? parsed.books.map(RI.store.normalizeBook) : [],
       logs: Array.isArray(parsed.logs) ? parsed.logs : [],
+      categories: Array.isArray(parsed.categories) ? parsed.categories : RI.store.defaultCategories(),
     };
   }
 

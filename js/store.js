@@ -3,6 +3,52 @@ window.RI = window.RI || {};
 RI.store = (function () {
   "use strict";
 
+  const DEFAULT_CATEGORIES = [
+    { id: "nf-finance-investing", name: "Finance & Investing", group: "Non-Fiction" },
+    { id: "nf-business", name: "Business", group: "Non-Fiction" },
+    { id: "nf-economics", name: "Economics", group: "Non-Fiction" },
+    { id: "nf-self-help", name: "Self-Help", group: "Non-Fiction" },
+    { id: "nf-productivity", name: "Productivity", group: "Non-Fiction" },
+    { id: "nf-psychology", name: "Psychology", group: "Non-Fiction" },
+    { id: "nf-philosophy", name: "Philosophy", group: "Non-Fiction" },
+    { id: "nf-history", name: "History", group: "Non-Fiction" },
+    { id: "nf-biography-memoir", name: "Biography & Memoir", group: "Non-Fiction" },
+    { id: "nf-politics", name: "Politics", group: "Non-Fiction" },
+    { id: "nf-science", name: "Science", group: "Non-Fiction" },
+    { id: "nf-technology", name: "Technology", group: "Non-Fiction" },
+    { id: "nf-health-wellness", name: "Health & Wellness", group: "Non-Fiction" },
+    { id: "nf-parenting-family", name: "Parenting & Family", group: "Non-Fiction" },
+    { id: "nf-travel", name: "Travel", group: "Non-Fiction" },
+    { id: "nf-true-crime", name: "True Crime", group: "Non-Fiction" },
+    { id: "nf-religion-spirituality", name: "Religion & Spirituality", group: "Non-Fiction" },
+    { id: "nf-sociology", name: "Sociology", group: "Non-Fiction" },
+    { id: "nf-nature-environment", name: "Nature & Environment", group: "Non-Fiction" },
+    { id: "nf-art-design", name: "Art & Design", group: "Non-Fiction" },
+    { id: "nf-cooking-food", name: "Cooking & Food", group: "Non-Fiction" },
+    { id: "nf-sports", name: "Sports", group: "Non-Fiction" },
+    { id: "nf-essays-journalism", name: "Essays & Journalism", group: "Non-Fiction" },
+    { id: "nf-law", name: "Law", group: "Non-Fiction" },
+    { id: "nf-education", name: "Education", group: "Non-Fiction" },
+    { id: "nf-reference", name: "Reference", group: "Non-Fiction" },
+    { id: "fic-literary-fiction", name: "Literary Fiction", group: "Fiction" },
+    { id: "fic-fantasy", name: "Fantasy", group: "Fiction" },
+    { id: "fic-science-fiction", name: "Science Fiction", group: "Fiction" },
+    { id: "fic-mystery", name: "Mystery", group: "Fiction" },
+    { id: "fic-thriller", name: "Thriller", group: "Fiction" },
+    { id: "fic-horror", name: "Horror", group: "Fiction" },
+    { id: "fic-romance", name: "Romance", group: "Fiction" },
+    { id: "fic-historical-fiction", name: "Historical Fiction", group: "Fiction" },
+    { id: "fic-crime", name: "Crime", group: "Fiction" },
+    { id: "fic-classics", name: "Classics", group: "Fiction" },
+    { id: "fic-young-adult", name: "Young Adult", group: "Fiction" },
+    { id: "fic-short-stories", name: "Short Stories", group: "Fiction" },
+    { id: "fic-poetry", name: "Poetry", group: "Fiction" },
+    { id: "fic-graphic-novels-comics", name: "Graphic Novels & Comics", group: "Fiction" },
+    { id: "fic-adventure", name: "Adventure", group: "Fiction" },
+    { id: "fic-dystopian", name: "Dystopian", group: "Fiction" },
+    { id: "fic-satire", name: "Satire", group: "Fiction" },
+  ];
+
   function generateId() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
       return window.crypto.randomUUID();
@@ -38,17 +84,38 @@ RI.store = (function () {
     return new Date(y, m - 1, d);
   }
 
-  function createBook(library, { title, author, totalPages, coverFile }) {
+  function normalizeOwnership(value) {
+    return value === "owned" || value === "library" ? value : null;
+  }
+
+  function createBook(library, { title, author, totalPages, coverFile, ownership, isbn, categoryIds }) {
     const book = {
       id: generateId(),
       title: title.trim(),
       author: (author || "").trim(),
       totalPages: Math.max(1, Math.round(Number(totalPages) || 0)),
       coverFile: coverFile || null,
+      ownership: normalizeOwnership(ownership),
+      isbn: (isbn || "").trim() || null,
+      categoryIds: Array.isArray(categoryIds) ? categoryIds.slice() : [],
       createdAt: new Date().toISOString(),
     };
     library.books.push(book);
     return book;
+  }
+
+  function normalizeBook(b) {
+    return {
+      id: b.id,
+      title: b.title,
+      author: b.author,
+      totalPages: b.totalPages,
+      coverFile: b.coverFile || null,
+      ownership: normalizeOwnership(b.ownership),
+      isbn: b.isbn || null,
+      categoryIds: Array.isArray(b.categoryIds) ? b.categoryIds : [],
+      createdAt: b.createdAt,
+    };
   }
 
   function getBookById(library, bookId) {
@@ -64,6 +131,11 @@ RI.store = (function () {
       book.totalPages = Math.max(1, Math.round(Number(patch.totalPages) || 0));
     }
     if (patch.coverFile !== undefined) book.coverFile = patch.coverFile;
+    if (patch.ownership !== undefined) book.ownership = normalizeOwnership(patch.ownership);
+    if (patch.isbn !== undefined) book.isbn = (patch.isbn || "").trim() || null;
+    if (patch.categoryIds !== undefined) {
+      book.categoryIds = Array.isArray(patch.categoryIds) ? patch.categoryIds.slice() : [];
+    }
     return book;
   }
 
@@ -73,6 +145,75 @@ RI.store = (function () {
     const [removed] = library.books.splice(idx, 1);
     library.logs = library.logs.filter((l) => l.bookId !== bookId);
     return removed;
+  }
+
+  function defaultCategories() {
+    return DEFAULT_CATEGORIES.map((c) => ({ ...c }));
+  }
+
+  function createDefaultLibrary() {
+    return { books: [], logs: [], categories: defaultCategories() };
+  }
+
+  function getCategoryById(library, categoryId) {
+    return library.categories.find((c) => c.id === categoryId) || null;
+  }
+
+  function createCategory(library, name, group) {
+    const trimmed = (name || "").trim();
+    if (!trimmed) return null;
+    const existing = library.categories.find((c) => c.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const category = {
+      id: generateId(),
+      name: trimmed,
+      group: group === "Fiction" || group === "Non-Fiction" ? group : null,
+    };
+    library.categories.push(category);
+    return category;
+  }
+
+  function renameCategory(library, categoryId, name) {
+    const category = getCategoryById(library, categoryId);
+    if (!category) return null;
+    const trimmed = (name || "").trim();
+    if (trimmed) category.name = trimmed;
+    return category;
+  }
+
+  function deleteCategory(library, categoryId) {
+    const idx = library.categories.findIndex((c) => c.id === categoryId);
+    if (idx === -1) return null;
+    const [removed] = library.categories.splice(idx, 1);
+    library.books.forEach((b) => {
+      b.categoryIds = (b.categoryIds || []).filter((id) => id !== categoryId);
+    });
+    return removed;
+  }
+
+  function categoriesForBook(library, book) {
+    const ids = new Set(book.categoryIds || []);
+    return library.categories.filter((c) => ids.has(c.id));
+  }
+
+  function bookHasCategory(book, categoryId) {
+    return (book.categoryIds || []).includes(categoryId);
+  }
+
+  function groupedCategories(library) {
+    const sorted = library.categories.slice().sort((a, b) => a.name.localeCompare(b.name));
+    const groups = { "Non-Fiction": [], Fiction: [], Custom: [] };
+    sorted.forEach((c) => {
+      const key = c.group === "Fiction" || c.group === "Non-Fiction" ? c.group : "Custom";
+      groups[key].push(c);
+    });
+    return groups;
+  }
+
+  function categoriesInUse(library) {
+    const used = new Set();
+    library.books.forEach((b) => (b.categoryIds || []).forEach((id) => used.add(id)));
+    return library.categories.filter((c) => used.has(c.id));
   }
 
   // pagesRead is pages read since the last log, not the current page number
@@ -209,6 +350,7 @@ RI.store = (function () {
     parseISODate,
 
     createBook,
+    normalizeBook,
     getBookById,
     updateBook,
     deleteBook,
@@ -228,5 +370,16 @@ RI.store = (function () {
     longestStreak,
     pagesPerDay,
     datedLogDateSet,
+
+    defaultCategories,
+    createDefaultLibrary,
+    getCategoryById,
+    createCategory,
+    renameCategory,
+    deleteCategory,
+    categoriesForBook,
+    bookHasCategory,
+    groupedCategories,
+    categoriesInUse,
   };
 })();
