@@ -30,6 +30,7 @@
     <nav class="header-nav">
       <a href="index.html" class="nav-link is-active">Library</a>
       <a href="streak.html" class="nav-link">Streak</a>
+      <a href="settings.html" class="nav-link">Settings</a>
     </nav>
   </header>
 
@@ -40,6 +41,8 @@
         <p class="page-subtitle" id="shelf-subtitle"></p>
       </div>
     </div>
+
+    <div class="filter-row hidden" id="category-filter-row"></div>
 
     <div class="book-grid" id="book-grid">
       <button type="button" class="book-card add-book-card" id="add-book-card">
@@ -86,6 +89,22 @@
       <div class="field">
         <label for="book-pages-input">Total pages</label>
         <input type="number" id="book-pages-input" min="1" step="1" required placeholder="304" />
+      </div>
+      <div class="field">
+        <label for="book-isbn-input">ISBN (optional)</label>
+        <input type="text" id="book-isbn-input" maxlength="32" placeholder="978-3-16-148410-0" />
+      </div>
+      <div class="field">
+        <label>Ownership</label>
+        <div class="ownership-toggle" id="ownership-toggle">
+          <button type="button" class="ownership-option" data-ownership="owned">Owned</button>
+          <button type="button" class="ownership-option" data-ownership="library">Library</button>
+        </div>
+        <p class="hint">Mark it Library so you remember it isn't on your shelf anymore.</p>
+      </div>
+      <div class="field">
+        <label>Categories</label>
+        <div class="category-checklist" id="book-category-checklist"></div>
       </div>
       <p class="error-text" id="book-form-error"></p>
       <div class="modal-actions">

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>read.in — Settings</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div id="setup-screen" class="setup-screen">
+  <div class="setup-card">
+    <img src="favicon.png" class="setup-icon" alt="" />
+    <h1 id="setup-title">Set up your library</h1>
+    <p id="setup-text">Loading…</p>
+    <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
+    <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
+    <div id="setup-error" class="setup-warning hidden" role="alert"></div>
+    <p class="setup-note">read.in only works in Chrome or Edge, and stores everything locally — nothing ever leaves your computer.</p>
+  </div>
+</div>
+
+<div id="app-shell" class="hidden">
+  <header class="app-header">
+    <a href="index.html" class="brand">
+      <img src="favicon.png" alt="" />
+      <img src="assets/wordmark.png" alt="read.in" class="wordmark" />
+    </a>
+    <nav class="header-nav">
+      <a href="index.html" class="nav-link">Library</a>
+      <a href="streak.html" class="nav-link">Streak</a>
+      <a href="settings.html" class="nav-link is-active">Settings</a>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <div class="page-title-row">
+      <div>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Manage the categories your books can be tagged with.</p>
+      </div>
+    </div>
+
+    <section class="settings-section">
+      <h2 class="section-title">Add a category</h2>
+      <form class="add-category-form" id="add-category-form" novalidate>
+        <input type="text" id="new-category-name" maxlength="60" placeholder="Category name" required />
+        <select id="new-category-group">
+          <option value="Custom">Custom</option>
+          <option value="Non-Fiction">Non-Fiction</option>
+          <option value="Fiction">Fiction</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+      <p class="error-text" id="category-form-error"></p>
+    </section>
+
+    <section class="settings-section">
+      <h2 class="section-title">Your categories</h2>
+      <div id="category-groups"></div>
+    </section>
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="js/fs.js"></script>
+<script src="js/store.js"></script>
+<script src="js/boot.js"></script>
+<script src="js/settings.js"></script>
+</body>
+</html>
