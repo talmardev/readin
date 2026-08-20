@@ -1601,6 +1601,37 @@ input[disabled] {
   margin-bottom: 6px;
 }
 
+.mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.mode-toggle-btn {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.mode-toggle-btn:hover {
+  border-color: var(--green-deep);
+  color: var(--ink);
+}
+
+.mode-toggle-btn.is-active {
+  background: var(--green-deep);
+  border-color: var(--green-deep);
+  color: #fff;
+}
+
 .timer-book {
   margin-bottom: 32px;
 }

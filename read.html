@@ -53,18 +53,25 @@
     <section id="read-step-duration" class="read-step hidden">
       <button type="button" class="btn btn-text" id="read-duration-back">&larr; Choose a different book</button>
       <div class="log-modal-book" id="duration-book"></div>
-      <h2 class="section-title">How long are you reading?</h2>
-      <div class="duration-chips" id="duration-chips">
-        <button type="button" class="duration-chip" data-minutes="15">15 min</button>
-        <button type="button" class="duration-chip" data-minutes="25">25 min</button>
-        <button type="button" class="duration-chip" data-minutes="30">30 min</button>
-        <button type="button" class="duration-chip" data-minutes="45">45 min</button>
-        <button type="button" class="duration-chip" data-minutes="60">60 min</button>
+      <h2 class="section-title" id="duration-heading">How long are you reading?</h2>
+      <div class="mode-toggle" id="read-mode-toggle">
+        <button type="button" class="mode-toggle-btn is-active" data-mode="countdown">Countdown</button>
+        <button type="button" class="mode-toggle-btn" data-mode="stopwatch">Stopwatch</button>
       </div>
-      <div class="field duration-custom-field">
-        <label for="duration-custom-input">Or a custom number of minutes</label>
-        <input type="number" id="duration-custom-input" min="1" step="1" placeholder="20" />
+      <div id="duration-picker-fields">
+        <div class="duration-chips" id="duration-chips">
+          <button type="button" class="duration-chip" data-minutes="15">15 min</button>
+          <button type="button" class="duration-chip" data-minutes="25">25 min</button>
+          <button type="button" class="duration-chip" data-minutes="30">30 min</button>
+          <button type="button" class="duration-chip" data-minutes="45">45 min</button>
+          <button type="button" class="duration-chip" data-minutes="60">60 min</button>
+        </div>
+        <div class="field duration-custom-field">
+          <label for="duration-custom-input">Or a custom number of minutes</label>
+          <input type="number" id="duration-custom-input" min="1" step="1" placeholder="20" />
+        </div>
       </div>
+      <p class="hint hidden" id="stopwatch-note">No set end — counts up until you stop it.</p>
       <p class="error-text" id="duration-form-error"></p>
       <button type="button" class="btn btn-primary btn-block" id="read-start-btn">Start reading</button>
     </section>

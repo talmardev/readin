@@ -514,11 +514,13 @@ RI.store = (function () {
   }
 
   function createReadSession(readsData, session) {
+    const mode = session.mode === "stopwatch" ? "stopwatch" : "countdown";
     const entry = {
       id: generateId(),
       bookId: session.bookId,
       logId: session.logId,
-      plannedMinutes: Math.max(1, Math.round(Number(session.plannedMinutes) || 0)),
+      mode,
+      plannedMinutes: mode === "stopwatch" ? null : Math.max(1, Math.round(Number(session.plannedMinutes) || 0)),
       startedAt: session.startedAt,
       endedAt: session.endedAt,
       pausedSeconds: Math.max(0, Math.round(Number(session.pausedSeconds) || 0)),

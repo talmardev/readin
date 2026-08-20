@@ -11,7 +11,8 @@
   let readsData = null;
 
   let selectedBookId = null;
-  let session = null; // { bookId, plannedMinutes, startedAt, pausedSeconds, pauseStartedAt, endedAt, endedEarly, activeSeconds }
+  let selectedMode = "countdown"; // "countdown" | "stopwatch"
+  let session = null; // { bookId, mode, plannedMinutes, startedAt, pausedSeconds, pauseStartedAt, endedAt, endedEarly, activeSeconds }
   let tickTimer = null;
 
   let pickerCoverUrls = [];
@@ -22,6 +23,10 @@
   const noBooksEl = document.getElementById("read-no-books");
 
   const durationBookEl = document.getElementById("duration-book");
+  const durationHeadingEl = document.getElementById("duration-heading");
+  const modeToggleEl = document.getElementById("read-mode-toggle");
+  const durationPickerFieldsEl = document.getElementById("duration-picker-fields");
+  const stopwatchNoteEl = document.getElementById("stopwatch-note");
   const durationChipsEl = document.getElementById("duration-chips");
   const durationCustomInput = document.getElementById("duration-custom-input");
   const durationFormError = document.getElementById("duration-form-error");
@@ -83,6 +88,7 @@
       SESSION_STORAGE_KEY,
       JSON.stringify({
         bookId: session.bookId,
+        mode: session.mode,
         plannedMinutes: session.plannedMinutes,
         startedAt: session.startedAt,
         pausedSeconds: session.pausedSeconds,
@@ -100,10 +106,15 @@
       const raw = localStorage.getItem(SESSION_STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || !parsed.bookId || !parsed.startedAt || !parsed.plannedMinutes) return null;
+      if (!parsed || !parsed.bookId || !parsed.startedAt) return null;
+      // sessions saved before stopwatch mode existed have no `mode` field —
+      // they were always countdown sessions, so default them to that
+      const mode = parsed.mode === "stopwatch" ? "stopwatch" : "countdown";
+      if (mode === "countdown" && !parsed.plannedMinutes) return null;
       return {
         bookId: parsed.bookId,
-        plannedMinutes: Number(parsed.plannedMinutes),
+        mode,
+        plannedMinutes: mode === "stopwatch" ? null : Number(parsed.plannedMinutes),
         startedAt: parsed.startedAt,
         pausedSeconds: Number(parsed.pausedSeconds) || 0,
         pauseStartedAt: parsed.pauseStartedAt || null,
@@ -303,24 +314,44 @@
     setActiveChip(Number(durationCustomInput.value));
   });
 
+  function setMode(mode) {
+    selectedMode = mode;
+    modeToggleEl.querySelectorAll(".mode-toggle-btn").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.mode === mode);
+    });
+    durationPickerFieldsEl.classList.toggle("hidden", mode === "stopwatch");
+    stopwatchNoteEl.classList.toggle("hidden", mode !== "stopwatch");
+    durationHeadingEl.textContent = mode === "stopwatch" ? "Ready to start reading?" : "How long are you reading?";
+    durationFormError.textContent = "";
+  }
+
+  modeToggleEl.querySelectorAll(".mode-toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setMode(btn.dataset.mode));
+  });
+
   async function renderDurationStep(book) {
     await renderBookSummary(durationBookEl, book);
     durationFormError.textContent = "";
     durationCustomInput.value = 25;
     setActiveChip(25);
+    setMode("countdown");
   }
 
   startBtn.addEventListener("click", async () => {
-    const minutes = Math.round(Number(durationCustomInput.value));
-    if (!minutes || minutes < 1) {
-      durationFormError.textContent = "Enter at least 1 minute.";
-      return;
+    let minutes = null;
+    if (selectedMode === "countdown") {
+      minutes = Math.round(Number(durationCustomInput.value));
+      if (!minutes || minutes < 1) {
+        durationFormError.textContent = "Enter at least 1 minute.";
+        return;
+      }
     }
     durationFormError.textContent = "";
 
     const now = Date.now();
     session = {
       bookId: selectedBookId,
+      mode: selectedMode,
       plannedMinutes: minutes,
       startedAt: new Date(now).toISOString(),
       pausedSeconds: 0,
@@ -366,6 +397,13 @@
 
   function tick() {
     const now = Date.now();
+    if (session.mode === "stopwatch") {
+      // stopwatch has no total to count down against, so the ring just
+      // stays fully lit (set once in enterTimerStep) as a "running" cue —
+      // only the elapsed time counts up, and only "Stop Reading" ends it
+      timerTimeEl.textContent = formatMMSS(activeMs(now));
+      return;
+    }
     const rem = remainingMs(now);
     updateRingAndTime(Math.max(0, rem));
     if (!session.pauseStartedAt && rem <= 0) {
@@ -384,6 +422,10 @@
     }
     await renderBookSummary(timerBookEl, book);
     setPauseUI(!!session.pauseStartedAt);
+    if (session.mode === "stopwatch") {
+      timerRingProgress.style.strokeDashoffset = "0";
+    }
+    endBtn.textContent = session.mode === "stopwatch" ? "Stop Reading" : "End Earlier";
     showStep("timer");
     window.addEventListener("beforeunload", beforeUnloadHandler);
     if (tickTimer) clearInterval(tickTimer);
@@ -624,6 +666,7 @@
       store.createReadSession(readsData, {
         bookId: session.bookId,
         logId: log.id,
+        mode: session.mode,
         plannedMinutes: session.plannedMinutes,
         startedAt: session.startedAt,
         endedAt: session.endedAt,
