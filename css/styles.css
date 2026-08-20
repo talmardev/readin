@@ -719,48 +719,83 @@ input[disabled] {
   color: var(--green-deep);
 }
 
+/* two-layer glyph: a muted background star with a green foreground star
+   clipped to 0/50/100% width on top — gives half-star fills without SVG. */
+.star-cell {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+}
+
+.star-cell .star-bg {
+  color: var(--line-strong);
+}
+
+.star-cell .star-fg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--green-deep);
+}
+
 .book-rating {
   display: flex;
   gap: 2px;
   margin-top: 6px;
-  line-height: 1;
 }
 
-.book-rating .star {
+.book-rating .star-cell {
   font-size: 0.82rem;
-  color: var(--line-strong);
-}
-
-.book-rating .star.is-filled {
-  color: var(--green-deep);
 }
 
 .star-picker {
   display: flex;
-  flex-direction: row-reverse;
-  justify-content: flex-end;
   gap: 4px;
 }
 
-.star-picker .star-btn {
+/* interactive picker: same bg/fg glyph as .star-cell, but with two
+   invisible half-width buttons stacked on top as real click targets —
+   .star-half-lo/.star-half-hi, not pixel-position math against
+   getBoundingClientRect, so half-star selection is a reliable DOM hit
+   regardless of zoom/DPI/click precision. */
+.star-picker .star-slot {
+  position: relative;
+  display: inline-block;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 1.6rem;
+  line-height: 1.6rem;
+}
+
+.star-picker .star-slot .star-bg,
+.star-picker .star-slot .star-fg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.star-picker .star-slot .star-bg {
+  color: var(--line-strong);
+}
+
+.star-picker .star-slot .star-fg {
+  color: var(--green-bright);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.star-picker .star-half {
+  position: absolute;
+  inset: 0 50% 0 0;
   background: none;
   border: none;
+  padding: 0;
   cursor: pointer;
-  padding: 2px;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--line-strong);
-  transition: color 0.1s ease, transform 0.1s ease;
 }
 
-.star-picker .star-btn:hover,
-.star-picker .star-btn:hover ~ .star-btn,
-.star-picker .star-btn.is-filled {
-  color: var(--green-bright);
-}
-
-.star-picker .star-btn:hover {
-  transform: scale(1.12);
+.star-picker .star-half-hi {
+  inset: 0 0 0 50%;
 }
 
 .rating-field {
@@ -786,8 +821,40 @@ input[disabled] {
   color: var(--ink);
 }
 
-.rating-nudge .star-picker .star-btn {
-  font-size: 1.25rem;
+.rating-nudge .star-picker .star-slot {
+  width: 1.3rem;
+  height: 1.3rem;
+  font-size: 1.3rem;
+  line-height: 1.3rem;
+}
+
+.shelf-search {
+  position: relative;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.shelf-search input[type="text"] {
+  padding-right: 32px;
+}
+
+.shelf-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-size: 1.1rem;
+  padding: 4px;
+  line-height: 0;
+  border-radius: 6px;
+}
+
+.shelf-search-clear:hover {
+  color: var(--ink);
 }
 
 .add-book-card .book-cover-wrap {
@@ -1705,6 +1772,10 @@ input[disabled] {
   .book-grid {
     grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
     gap: 22px 14px;
+  }
+
+  .shelf-search {
+    width: 100%;
   }
 
   .stat-row {

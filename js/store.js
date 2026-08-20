@@ -433,11 +433,24 @@ RI.store = (function () {
     return entry;
   }
 
+  // stars are 1-5 in 0.5 increments
   function setRating(ratingsData, bookId, stars) {
     const entry = ensureRatingEntry(ratingsData, bookId);
-    entry.stars = Math.max(1, Math.min(5, Math.round(Number(stars) || 0)));
+    const clamped = Math.max(1, Math.min(5, Number(stars) || 0));
+    entry.stars = Math.round(clamped * 2) / 2;
     entry.updatedAt = new Date().toISOString();
     return entry;
+  }
+
+  // how "full" star slot `index` (1-5) should render for a given rating value —
+  // 1 = fully filled, 0.5 = half filled, 0 = empty. Shared by both the
+  // non-interactive card display and the interactive star pickers so a value
+  // like 3.5 renders identically everywhere.
+  function starFraction(value, index) {
+    const v = Number(value) || 0;
+    if (v >= index) return 1;
+    if (v >= index - 0.5) return 0.5;
+    return 0;
   }
 
   function markRatingNudged(ratingsData, bookId, todayISO) {
@@ -456,6 +469,48 @@ RI.store = (function () {
       return !entry || entry.lastNudgedDate !== today;
     }
     return false;
+  }
+
+  function csvEscape(value) {
+    const s = value === null || value === undefined ? "" : String(value);
+    if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  // one row per book, in the same order the shelf renders them
+  function libraryToCSV(library, ratingsData) {
+    const headers = [
+      "Title",
+      "Author",
+      "Total Pages",
+      "Pages Read",
+      "Progress %",
+      "Rating",
+      "Ownership",
+      "ISBN",
+      "Categories",
+      "Date Added",
+    ];
+    const rows = sortedBooksForLibrary(library).map((book) => {
+      const progress = progressForBook(library, book);
+      const rating = getRating(ratingsData, book.id);
+      const categories = categoriesForBook(library, book)
+        .map((c) => c.name)
+        .join("; ");
+      return [
+        book.title,
+        book.author || "",
+        book.totalPages,
+        progress.pagesRead,
+        progress.percent,
+        rating && rating.stars ? rating.stars : "",
+        book.ownership || "",
+        book.isbn || "",
+        categories,
+        book.createdAt ? book.createdAt.slice(0, 10) : "",
+      ];
+    });
+    return [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n") + "\r\n";
   }
 
   function createReadSession(readsData, session) {
@@ -528,7 +583,10 @@ RI.store = (function () {
     getRating,
     ensureRatingEntry,
     setRating,
+    starFraction,
     markRatingNudged,
     shouldShowRatingNudge,
+
+    libraryToCSV,
   };
 })();

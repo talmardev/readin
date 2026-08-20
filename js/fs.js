@@ -225,6 +225,19 @@ RI.fs = (function () {
     await writable.close();
   }
 
+  // one-off exports go through the native Save As dialog rather than the
+  // app's own data/ folder handle — this is the user picking a destination
+  // outside read.in's own storage, not a read.in-managed file
+  async function saveCsvAs(suggestedName, csvText) {
+    const handle = await window.showSaveFilePicker({
+      suggestedName,
+      types: [{ description: "CSV file", accept: { "text/csv": [".csv"] } }],
+    });
+    const writable = await handle.createWritable();
+    await writable.write(csvText);
+    await writable.close();
+  }
+
   function extensionFromFile(file) {
     const dotIdx = file.name.lastIndexOf(".");
     if (dotIdx > 0 && dotIdx < file.name.length - 1) {
@@ -289,6 +302,7 @@ RI.fs = (function () {
     writeReads,
     readRatings,
     writeRatings,
+    saveCsvAs,
     saveCover,
     deleteCover,
     readCoverAsURL,

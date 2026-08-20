@@ -14,6 +14,7 @@
   const newCategoryGroup = document.getElementById("new-category-group");
   const categoryFormError = document.getElementById("category-form-error");
   const categoryGroups = document.getElementById("category-groups");
+  const exportCsvBtn = document.getElementById("export-csv-btn");
 
   async function persist() {
     try {
@@ -96,6 +97,22 @@
     addCategoryForm.reset();
     renderCategoryGroups();
     newCategoryName.focus();
+  });
+
+  exportCsvBtn.addEventListener("click", async () => {
+    exportCsvBtn.disabled = true;
+    try {
+      const csv = store.libraryToCSV(ctx.library, ctx.ratingsData);
+      const filename = `read.in-library-${store.todayISODate()}.csv`;
+      await fs.saveCsvAs(filename, csv);
+      RI.toast("Exported library to CSV.");
+    } catch (err) {
+      if (err && err.name === "AbortError") return; // user closed the save dialog
+      console.error(err);
+      RI.toast("Could not export — " + (err && err.message ? err.message : "unknown error"), "error");
+    } finally {
+      exportCsvBtn.disabled = false;
+    }
   });
 
   RI.boot((bootCtx) => {

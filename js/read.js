@@ -478,18 +478,88 @@
     }
   }
 
-  function setStarPickerValue(picker, value) {
-    Array.from(picker.querySelectorAll(".star-btn")).forEach((btn) => {
-      btn.classList.toggle("is-filled", Number(btn.dataset.value) <= value);
+  // one interactive star position: a visual glyph (bg + fg) plus two
+  // invisible half-width buttons stacked on top — clicking is a real DOM
+  // element hit (dedicated "set to X.5" / "set to X" buttons), not
+  // pixel-position math against getBoundingClientRect, so it's reliable
+  // regardless of zoom/DPI/click precision, and every half-star is reachable
+  // by keyboard/Tab. Same approach as js/library.js's picker — kept
+  // duplicated per this codebase's per-page style rather than factored into
+  // a shared file.
+  function buildStarSlot(index, onPick, onPreview) {
+    const slot = document.createElement("span");
+    slot.className = "star-slot";
+    const bg = document.createElement("span");
+    bg.className = "star-bg";
+    bg.textContent = "★";
+    const fg = document.createElement("span");
+    fg.className = "star-fg";
+    fg.textContent = "★";
+    slot.appendChild(bg);
+    slot.appendChild(fg);
+
+    [index - 0.5, index].forEach((value, half) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "star-half " + (half === 0 ? "star-half-lo" : "star-half-hi");
+      btn.setAttribute("aria-label", `${value} star${value === 1 ? "" : "s"}`);
+      btn.addEventListener("mouseenter", () => onPreview(value));
+      btn.addEventListener("focus", () => onPreview(value));
+      btn.addEventListener("click", () => onPick(value));
+      slot.appendChild(btn);
     });
+
+    return { slot, fg };
   }
+
+  function buildStarPicker(container) {
+    container.innerHTML = "";
+    let current = 0;
+    let onPickCb = null;
+    const setters = [];
+
+    function render(value) {
+      setters.forEach((setFraction, idx) => setFraction(store.starFraction(value, idx + 1)));
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      const { slot, fg } = buildStarSlot(
+        i,
+        (value) => {
+          current = value;
+          render(current);
+          if (onPickCb) onPickCb(current);
+        },
+        (value) => render(value)
+      );
+      setters.push((fraction) => {
+        fg.style.width = fraction * 100 + "%";
+      });
+      container.appendChild(slot);
+    }
+
+    container.addEventListener("mouseleave", () => render(current));
+    render(current);
+
+    return {
+      setValue(value) {
+        current = value || 0;
+        render(current);
+      },
+      setOnPick(cb) {
+        onPickCb = cb;
+      },
+    };
+  }
+
+  const rateModalStarPicker = buildStarPicker(rateModalPicker);
 
   async function openRateModal(bookId) {
     const book = store.getBookById(ctx.library, bookId);
     if (!book) return;
     rateModalBookId = bookId;
     await renderBookSummary(rateModalBookEl, book);
-    setStarPickerValue(rateModalPicker, 0);
+    rateModalStarPicker.setValue(0);
     rateModalOverlay.classList.remove("hidden");
   }
 
@@ -511,10 +581,9 @@
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !rateModalOverlay.classList.contains("hidden")) closeRateModal();
   });
-  rateModalPicker.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".star-btn");
-    if (!btn || !rateModalBookId) return;
-    store.setRating(ctx.ratingsData, rateModalBookId, Number(btn.dataset.value));
+  rateModalStarPicker.setOnPick(async (value) => {
+    if (!rateModalBookId) return;
+    store.setRating(ctx.ratingsData, rateModalBookId, value);
     await persistRatings();
     closeRateModal();
   });

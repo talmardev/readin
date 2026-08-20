@@ -12,6 +12,7 @@
   let ctx = null;
   let gridCoverUrls = new Map();
   let selectedCategoryFilter = null;
+  let searchQuery = "";
 
   let editingBookId = null;
   let pendingCoverFile = null;
@@ -26,6 +27,8 @@
   const addBookCard = document.getElementById("add-book-card");
   const shelfSubtitle = document.getElementById("shelf-subtitle");
   const categoryFilterRow = document.getElementById("category-filter-row");
+  const shelfSearchInput = document.getElementById("shelf-search-input");
+  const shelfSearchClear = document.getElementById("shelf-search-clear");
 
   const bookModalOverlay = document.getElementById("book-modal-overlay");
   const bookModalTitle = document.getElementById("book-modal-title");
@@ -142,13 +145,33 @@
     });
   }
 
+  function matchesSearch(book, query) {
+    if (!query) return true;
+    return (book.title || "").toLowerCase().includes(query) || (book.author || "").toLowerCase().includes(query);
+  }
+
+  shelfSearchInput.addEventListener("input", () => {
+    searchQuery = shelfSearchInput.value.trim().toLowerCase();
+    shelfSearchClear.classList.toggle("hidden", !searchQuery);
+    renderGrid();
+  });
+
+  shelfSearchClear.addEventListener("click", () => {
+    shelfSearchInput.value = "";
+    searchQuery = "";
+    shelfSearchClear.classList.add("hidden");
+    renderGrid();
+    shelfSearchInput.focus();
+  });
+
   async function renderGrid() {
     renderCategoryFilterRow();
 
     const allBooks = store.sortedBooksForLibrary(ctx.library);
-    const books = selectedCategoryFilter
+    const categoryFiltered = selectedCategoryFilter
       ? allBooks.filter((b) => store.bookHasCategory(b, selectedCategoryFilter))
       : allBooks;
+    const books = categoryFiltered.filter((b) => matchesSearch(b, searchQuery));
 
     gridCoverUrls.forEach((url) => URL.revokeObjectURL(url));
     gridCoverUrls = new Map();
@@ -161,9 +184,13 @@
     if (books.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty-state";
-      empty.textContent = selectedCategoryFilter
-        ? "No books tagged with this category yet."
-        : "Your shelf is empty. Add your first book to start tracking.";
+      if (searchQuery) {
+        empty.textContent = `No books match "${shelfSearchInput.value.trim()}".`;
+      } else if (selectedCategoryFilter) {
+        empty.textContent = "No books tagged with this category yet.";
+      } else {
+        empty.textContent = "Your shelf is empty. Add your first book to start tracking.";
+      }
       grid.appendChild(empty);
     }
 
@@ -193,26 +220,109 @@
     Array.from(activeNudges.keys()).forEach(removeNudge);
   }
 
-  function buildStarPicker(onPick) {
-    const picker = document.createElement("div");
-    picker.className = "star-picker";
-    for (let v = 5; v >= 1; v--) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "star-btn";
-      btn.dataset.value = String(v);
-      btn.setAttribute("aria-label", `${v} star${v === 1 ? "" : "s"}`);
-      btn.textContent = "★";
-      btn.addEventListener("click", () => onPick(v));
-      picker.appendChild(btn);
-    }
-    return picker;
+  // one non-interactive two-layer star glyph (muted background + green
+  // foreground, foreground clipped to a 0/50/100% width) — used for the
+  // read-only card display
+  function buildStarGlyph() {
+    const cell = document.createElement("span");
+    cell.className = "star-cell";
+    const bg = document.createElement("span");
+    bg.className = "star-bg";
+    bg.textContent = "★";
+    const fg = document.createElement("span");
+    fg.className = "star-fg";
+    fg.textContent = "★";
+    cell.appendChild(bg);
+    cell.appendChild(fg);
+    return { cell, fg };
   }
 
-  function setStarPickerValue(picker, value) {
-    Array.from(picker.querySelectorAll(".star-btn")).forEach((btn) => {
-      btn.classList.toggle("is-filled", Number(btn.dataset.value) <= value);
+  function buildStarRow(value) {
+    const row = document.createElement("div");
+    row.className = "book-rating";
+    for (let i = 1; i <= 5; i++) {
+      const { cell, fg } = buildStarGlyph();
+      fg.style.width = store.starFraction(value, i) * 100 + "%";
+      row.appendChild(cell);
+    }
+    return row;
+  }
+
+  // one interactive star position: a visual glyph (bg + fg, same as
+  // buildStarGlyph) plus two invisible half-width buttons stacked on top —
+  // clicking is a real DOM element hit (dedicated "set to X.5" / "set to X"
+  // buttons), not pixel-position math against getBoundingClientRect, so it's
+  // reliable regardless of zoom/DPI/click precision. This also makes every
+  // half-star reachable by keyboard/Tab, unlike a single click-split button.
+  function buildStarSlot(index, onPick, onPreview) {
+    const slot = document.createElement("span");
+    slot.className = "star-slot";
+    const bg = document.createElement("span");
+    bg.className = "star-bg";
+    bg.textContent = "★";
+    const fg = document.createElement("span");
+    fg.className = "star-fg";
+    fg.textContent = "★";
+    slot.appendChild(bg);
+    slot.appendChild(fg);
+
+    [index - 0.5, index].forEach((value, half) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "star-half " + (half === 0 ? "star-half-lo" : "star-half-hi");
+      btn.setAttribute("aria-label", `${value} star${value === 1 ? "" : "s"}`);
+      btn.addEventListener("mouseenter", () => onPreview(value));
+      btn.addEventListener("focus", () => onPreview(value));
+      btn.addEventListener("click", () => onPick(value));
+      slot.appendChild(btn);
     });
+
+    return { slot, fg };
+  }
+
+  // interactive 1-5 star picker in 0.5 increments. Populates `container`
+  // (an existing .star-picker element) and returns a controller so the same
+  // DOM/listeners can be reused across modal opens instead of rebuilding —
+  // setValue() resets the displayed rating, setOnPick() rebinds which book
+  // a click should save to.
+  function buildStarPicker(container) {
+    container.innerHTML = "";
+    let current = 0;
+    let onPickCb = null;
+    const setters = [];
+
+    function render(value) {
+      setters.forEach((setFraction, idx) => setFraction(store.starFraction(value, idx + 1)));
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      const { slot, fg } = buildStarSlot(
+        i,
+        (value) => {
+          current = value;
+          render(current);
+          if (onPickCb) onPickCb(current);
+        },
+        (value) => render(value)
+      );
+      setters.push((fraction) => {
+        fg.style.width = fraction * 100 + "%";
+      });
+      container.appendChild(slot);
+    }
+
+    container.addEventListener("mouseleave", () => render(current));
+    render(current);
+
+    return {
+      setValue(value) {
+        current = value || 0;
+        render(current);
+      },
+      setOnPick(cb) {
+        onPickCb = cb;
+      },
+    };
   }
 
   function positionNudge(bubble, cardEl) {
@@ -236,14 +346,16 @@
     text.textContent = "Liked it? Hated it? Rate it.";
     bubble.appendChild(text);
 
-    bubble.appendChild(
-      buildStarPicker(async (stars) => {
-        store.setRating(ctx.ratingsData, book.id, stars);
-        await persistRatings();
-        removeNudge(book.id);
-        await renderGrid();
-      })
-    );
+    const pickerEl = document.createElement("div");
+    pickerEl.className = "star-picker";
+    bubble.appendChild(pickerEl);
+    const picker = buildStarPicker(pickerEl);
+    picker.setOnPick(async (stars) => {
+      store.setRating(ctx.ratingsData, book.id, stars);
+      await persistRatings();
+      removeNudge(book.id);
+      await renderGrid();
+    });
 
     document.body.appendChild(bubble);
     positionNudge(bubble, cardEl);
@@ -406,18 +518,6 @@
     return card;
   }
 
-  function buildStarRow(stars) {
-    const row = document.createElement("div");
-    row.className = "book-rating";
-    for (let i = 1; i <= 5; i++) {
-      const star = document.createElement("span");
-      star.className = "star" + (i <= stars ? " is-filled" : "");
-      star.textContent = "★";
-      row.appendChild(star);
-    }
-    return row;
-  }
-
   // short delay tells a single click apart from a double click's first half
   function attachCardInteractions(card, bookId) {
     let clickTimer = null;
@@ -501,7 +601,7 @@
     info.appendChild(title);
     rateModalBookEl.appendChild(info);
 
-    setStarPickerValue(rateModalPicker, 0);
+    rateModalStarPicker.setValue(0);
     showOverlay(rateModalOverlay);
   }
 
@@ -516,22 +616,25 @@
 
   rateModalClose.addEventListener("click", closeRateModal);
   rateModalSkip.addEventListener("click", closeRateModal);
-  rateModalPicker.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".star-btn");
-    if (!btn || !rateModalBookId) return;
-    store.setRating(ctx.ratingsData, rateModalBookId, Number(btn.dataset.value));
+
+  const rateModalStarPicker = buildStarPicker(rateModalPicker);
+  rateModalStarPicker.setOnPick(async (value) => {
+    if (!rateModalBookId) return;
+    store.setRating(ctx.ratingsData, rateModalBookId, value);
     await persistRatings();
     closeRateModal();
     await renderGrid();
   });
 
-  bookRatingPicker.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".star-btn");
-    if (!btn || !editingBookId) return;
-    const value = Number(btn.dataset.value);
+  const bookRatingStarPicker = buildStarPicker(bookRatingPicker);
+  bookRatingStarPicker.setOnPick(async (value) => {
+    if (!editingBookId) return;
     store.setRating(ctx.ratingsData, editingBookId, value);
     await persistRatings();
-    setStarPickerValue(bookRatingPicker, value);
+    bookRatingStarPicker.setValue(value);
+    // the modal stays open, but refresh the card underneath so its star row
+    // isn't stale if the user closes without hitting "Save changes"
+    await renderGrid();
   });
 
   function setCoverPreview(url) {
@@ -645,7 +748,7 @@
     bookRatingField.classList.toggle("hidden", !finished);
     if (finished) {
       const rating = store.getRating(ctx.ratingsData, book.id);
-      setStarPickerValue(bookRatingPicker, rating ? rating.stars || 0 : 0);
+      bookRatingStarPicker.setValue(rating ? rating.stars || 0 : 0);
     }
     bookModalDeleteRow.classList.remove("hidden");
     bookFormError.textContent = "";
