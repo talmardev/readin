@@ -46,10 +46,12 @@ RI.boot = function (onReady) {
   async function proceedWithRoot(rootHandle) {
     try {
       const { dataHandle, coversHandle } = await RI.fs.ensureDataDirs(rootHandle);
-      const library = await RI.fs.readLibrary(dataHandle);
+      const { library: libraryBase, logs } = await RI.fs.readLibraryAndLogs(dataHandle);
+      const library = { books: libraryBase.books, categories: libraryBase.categories, logs };
+      const ratingsData = await RI.fs.readRatings(dataHandle);
       screen.classList.add("hidden");
       appShell.classList.remove("hidden");
-      onReady({ library, dataHandle, coversHandle, rootHandle });
+      onReady({ library, dataHandle, coversHandle, rootHandle, ratingsData });
     } catch (err) {
       console.error(err);
       showError("Could not read your data folder. " + (err && err.message ? err.message : ""));

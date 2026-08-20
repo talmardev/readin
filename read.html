@@ -141,6 +141,27 @@
   </main>
 </div>
 
+<div id="rate-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rate-modal-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="rate-modal-title">You finished it!</h2>
+      <button type="button" class="modal-close" id="rate-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="log-modal-book" id="rate-modal-book"></div>
+    <p class="hint" style="margin-bottom: 14px;">How would you rate it?</p>
+    <div class="star-picker" id="rate-modal-picker">
+      <button type="button" class="star-btn" data-value="5" aria-label="5 stars">&#9733;</button>
+      <button type="button" class="star-btn" data-value="4" aria-label="4 stars">&#9733;</button>
+      <button type="button" class="star-btn" data-value="3" aria-label="3 stars">&#9733;</button>
+      <button type="button" class="star-btn" data-value="2" aria-label="2 stars">&#9733;</button>
+      <button type="button" class="star-btn" data-value="1" aria-label="1 star">&#9733;</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="rate-modal-skip">Maybe later</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container" class="toast-container"></div>
 
 <script src="js/fs.js"></script>

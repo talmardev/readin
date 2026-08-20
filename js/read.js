@@ -51,6 +51,14 @@
   const savedSummaryEl = document.getElementById("saved-summary");
   const savedReadAgainBtn = document.getElementById("saved-read-again-btn");
 
+  const rateModalOverlay = document.getElementById("rate-modal-overlay");
+  const rateModalBookEl = document.getElementById("rate-modal-book");
+  const rateModalPicker = document.getElementById("rate-modal-picker");
+  const rateModalClose = document.getElementById("rate-modal-close");
+  const rateModalSkip = document.getElementById("rate-modal-skip");
+  let rateModalBookId = null;
+  let pendingSavedSummary = null;
+
   const RADIUS = timerRingProgress.r.baseVal.value; // derived from the SVG, not hand-copied
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
   timerRingProgress.style.strokeDasharray = String(CIRCUMFERENCE);
@@ -459,6 +467,58 @@
     finishedFormError.textContent = "";
   }
 
+  // ---- rating modal ----
+
+  async function persistRatings() {
+    try {
+      await fs.writeRatings(ctx.dataHandle, ctx.ratingsData);
+    } catch (err) {
+      console.error(err);
+      RI.toast("Could not save rating — " + (err && err.message ? err.message : "unknown error"), "error");
+    }
+  }
+
+  function setStarPickerValue(picker, value) {
+    Array.from(picker.querySelectorAll(".star-btn")).forEach((btn) => {
+      btn.classList.toggle("is-filled", Number(btn.dataset.value) <= value);
+    });
+  }
+
+  async function openRateModal(bookId) {
+    const book = store.getBookById(ctx.library, bookId);
+    if (!book) return;
+    rateModalBookId = bookId;
+    await renderBookSummary(rateModalBookEl, book);
+    setStarPickerValue(rateModalPicker, 0);
+    rateModalOverlay.classList.remove("hidden");
+  }
+
+  function closeRateModal() {
+    rateModalOverlay.classList.add("hidden");
+    rateModalBookId = null;
+    if (pendingSavedSummary) {
+      savedSummaryEl.textContent = pendingSavedSummary;
+      pendingSavedSummary = null;
+      showStep("saved");
+    }
+  }
+
+  rateModalClose.addEventListener("click", closeRateModal);
+  rateModalSkip.addEventListener("click", closeRateModal);
+  rateModalOverlay.addEventListener("click", (e) => {
+    if (e.target === rateModalOverlay) closeRateModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !rateModalOverlay.classList.contains("hidden")) closeRateModal();
+  });
+  rateModalPicker.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".star-btn");
+    if (!btn || !rateModalBookId) return;
+    store.setRating(ctx.ratingsData, rateModalBookId, Number(btn.dataset.value));
+    await persistRatings();
+    closeRateModal();
+  });
+
   finishedForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const book = store.getBookById(ctx.library, session.bookId);
@@ -490,7 +550,7 @@
         date: store.todayISODate(),
         isPastRead: false,
       });
-      await fs.writeLibrary(ctx.dataHandle, ctx.library);
+      await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
 
       store.createReadSession(readsData, {
         bookId: session.bookId,
@@ -506,8 +566,25 @@
       await fs.writeReads(ctx.dataHandle, readsData);
 
       clearSessionStorage();
-      savedSummaryEl.textContent = `Logged ${pages} page${pages === 1 ? "" : "s"} for "${book.title}".`;
+      const summary = `Logged ${pages} page${pages === 1 ? "" : "s"} for "${book.title}".`;
+      const bookId = session.bookId;
       session = null;
+
+      // this log just finished the book (remaining was checked >0 above) —
+      // offer the rating modal before showing the plain "saved" screen
+      const justFinished = store.isBookFinished(ctx.library, store.getBookById(ctx.library, bookId));
+      if (justFinished) {
+        const rating = store.getRating(ctx.ratingsData, bookId);
+        if (!rating || !rating.stars) {
+          store.markRatingNudged(ctx.ratingsData, bookId, store.todayISODate());
+          await persistRatings();
+          pendingSavedSummary = summary;
+          await openRateModal(bookId);
+          return;
+        }
+      }
+
+      savedSummaryEl.textContent = summary;
       showStep("saved");
     } catch (err) {
       console.error(err);

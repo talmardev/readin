@@ -11,6 +11,8 @@ RI.fs = (function () {
   const HANDLE_KEY = "root";
   const LIBRARY_FILE = "library.json";
   const READS_FILE = "reads.json";
+  const LOGS_FILE = "logs.json";
+  const RATINGS_FILE = "ratings.json";
 
   function isSupported() {
     return typeof window.showDirectoryPicker === "function";
@@ -88,35 +90,90 @@ RI.fs = (function () {
     return { dataHandle, coversHandle };
   }
 
-  // needs RI.store loaded first, for default categories and book shape
-  async function readLibrary(dataHandle) {
+  // library.json only holds books + categories now — logs live in logs.json
+  // (see readLibraryAndLogs, which also migrates any pre-existing embedded logs)
+  async function writeLibrary(dataHandle, library) {
+    const fileHandle = await dataHandle.getFileHandle(LIBRARY_FILE, { create: true });
+    const writable = await fileHandle.createWritable();
+    const toWrite = { books: library.books, categories: library.categories };
+    await writable.write(JSON.stringify(toWrite, null, 2));
+    await writable.close();
+  }
+
+  // logs.json — { logs: [...] }, split out of library.json so books/categories
+  // stay small and logs (the fastest-growing data) live on their own
+  async function readLogs(dataHandle) {
     let fileHandle;
+    try {
+      fileHandle = await dataHandle.getFileHandle(LOGS_FILE, { create: false });
+    } catch (err) {
+      if (err && err.name === "NotFoundError") return { logs: [] };
+      throw err;
+    }
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    if (!text.trim()) return { logs: [] };
+    const parsed = JSON.parse(text);
+    return { logs: Array.isArray(parsed.logs) ? parsed.logs : [] };
+  }
+
+  async function writeLogs(dataHandle, logsData) {
+    const fileHandle = await dataHandle.getFileHandle(LOGS_FILE, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify({ logs: logsData.logs }, null, 2));
+    await writable.close();
+  }
+
+  async function writeLibraryAndLogs(dataHandle, library) {
+    await writeLibrary(dataHandle, library);
+    await writeLogs(dataHandle, { logs: library.logs });
+  }
+
+  // needs RI.store loaded first, for default categories and book shape.
+  // Reads library.json + logs.json and merges them into one in-memory
+  // library object ({books, categories, logs}) so store.js can keep treating
+  // "library" as a single blob. If library.json still has an embedded `logs`
+  // array (pre-split format), those entries are folded into logs.json and
+  // stripped from library.json on the spot, silently.
+  async function readLibraryAndLogs(dataHandle) {
+    let fileHandle;
+    let rawParsed = null;
     try {
       fileHandle = await dataHandle.getFileHandle(LIBRARY_FILE, { create: false });
     } catch (err) {
       if (err && err.name === "NotFoundError") {
         const fresh = RI.store.createDefaultLibrary();
         await writeLibrary(dataHandle, fresh);
-        return fresh;
+        return { library: { books: fresh.books, categories: fresh.categories }, logs: [] };
       }
       throw err;
     }
     const file = await fileHandle.getFile();
     const text = await file.text();
-    if (!text.trim()) return RI.store.createDefaultLibrary();
-    const parsed = JSON.parse(text);
-    return {
-      books: Array.isArray(parsed.books) ? parsed.books.map(RI.store.normalizeBook) : [],
-      logs: Array.isArray(parsed.logs) ? parsed.logs : [],
-      categories: Array.isArray(parsed.categories) ? parsed.categories : RI.store.defaultCategories(),
-    };
-  }
+    if (text.trim()) rawParsed = JSON.parse(text);
 
-  async function writeLibrary(dataHandle, library) {
-    const fileHandle = await dataHandle.getFileHandle(LIBRARY_FILE, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(library, null, 2));
-    await writable.close();
+    const books =
+      rawParsed && Array.isArray(rawParsed.books) ? rawParsed.books.map(RI.store.normalizeBook) : [];
+    const categories =
+      rawParsed && Array.isArray(rawParsed.categories) ? rawParsed.categories : RI.store.defaultCategories();
+
+    const { logs: existingLogs } = await readLogs(dataHandle);
+
+    if (rawParsed && Array.isArray(rawParsed.logs)) {
+      const seen = new Set(existingLogs.map((l) => l.id));
+      const merged = existingLogs.slice();
+      rawParsed.logs.forEach((l) => {
+        if (!seen.has(l.id)) {
+          merged.push(l);
+          seen.add(l.id);
+        }
+      });
+      await writeLogs(dataHandle, { logs: merged });
+      await writeLibrary(dataHandle, { books, categories });
+      return { library: { books, categories }, logs: merged };
+    }
+
+    return { library: { books, categories }, logs: existingLogs };
   }
 
   // reads.json — one row per timed Read-page session, separate from library.json
@@ -139,6 +196,32 @@ RI.fs = (function () {
     const fileHandle = await dataHandle.getFileHandle(READS_FILE, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(JSON.stringify(readsData, null, 2));
+    await writable.close();
+  }
+
+  // ratings.json — { ratings: [...] }, one row per book that has ever hit
+  // 100%. stars is null until the user actually rates it; the row still
+  // exists so lastNudgedDate (the once-a-day nudge-popup throttle) has
+  // somewhere to live even before a rating is given.
+  async function readRatings(dataHandle) {
+    let fileHandle;
+    try {
+      fileHandle = await dataHandle.getFileHandle(RATINGS_FILE, { create: false });
+    } catch (err) {
+      if (err && err.name === "NotFoundError") return { ratings: [] };
+      throw err;
+    }
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    if (!text.trim()) return { ratings: [] };
+    const parsed = JSON.parse(text);
+    return { ratings: Array.isArray(parsed.ratings) ? parsed.ratings : [] };
+  }
+
+  async function writeRatings(dataHandle, ratingsData) {
+    const fileHandle = await dataHandle.getFileHandle(RATINGS_FILE, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify({ ratings: ratingsData.ratings }, null, 2));
     await writable.close();
   }
 
@@ -197,10 +280,15 @@ RI.fs = (function () {
     queryPermission,
     requestPermission,
     ensureDataDirs,
-    readLibrary,
+    readLibraryAndLogs,
     writeLibrary,
+    writeLibraryAndLogs,
+    readLogs,
+    writeLogs,
     readReads,
     writeReads,
+    readRatings,
+    writeRatings,
     saveCover,
     deleteCover,
     readCoverAsURL,

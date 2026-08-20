@@ -17,7 +17,7 @@
 
   async function persist() {
     try {
-      await fs.writeLibrary(ctx.dataHandle, ctx.library);
+      await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
     } catch (err) {
       console.error(err);
       RI.toast("Could not save — " + (err && err.message ? err.message : "unknown error"), "error");

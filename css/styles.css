@@ -719,6 +719,77 @@ input[disabled] {
   color: var(--green-deep);
 }
 
+.book-rating {
+  display: flex;
+  gap: 2px;
+  margin-top: 6px;
+  line-height: 1;
+}
+
+.book-rating .star {
+  font-size: 0.82rem;
+  color: var(--line-strong);
+}
+
+.book-rating .star.is-filled {
+  color: var(--green-deep);
+}
+
+.star-picker {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.star-picker .star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--line-strong);
+  transition: color 0.1s ease, transform 0.1s ease;
+}
+
+.star-picker .star-btn:hover,
+.star-picker .star-btn:hover ~ .star-btn,
+.star-picker .star-btn.is-filled {
+  color: var(--green-bright);
+}
+
+.star-picker .star-btn:hover {
+  transform: scale(1.12);
+}
+
+.rating-field {
+  margin-bottom: 18px;
+}
+
+.rating-nudge {
+  position: absolute;
+  z-index: 150;
+  width: 188px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 14px;
+  animation: toast-in 0.16s ease;
+}
+
+.rating-nudge p {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rating-nudge .star-picker .star-btn {
+  font-size: 1.25rem;
+}
+
 .add-book-card .book-cover-wrap {
   background: var(--surface);
   border: 1.5px dashed var(--line-strong);

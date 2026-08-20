@@ -63,12 +63,34 @@
   const logModalClose = document.getElementById("log-modal-close");
   const recentLogsList = document.getElementById("recent-logs-list");
 
+  const bookRatingField = document.getElementById("book-rating-field");
+  const bookRatingPicker = document.getElementById("book-rating-picker");
+
+  const rateModalOverlay = document.getElementById("rate-modal-overlay");
+  const rateModalBookEl = document.getElementById("rate-modal-book");
+  const rateModalPicker = document.getElementById("rate-modal-picker");
+  const rateModalClose = document.getElementById("rate-modal-close");
+  const rateModalSkip = document.getElementById("rate-modal-skip");
+
+  let rateModalBookId = null;
+  let rateModalCoverUrl = null;
+  let activeNudges = new Map(); // bookId -> { el, timer }
+
   async function persist() {
     try {
-      await fs.writeLibrary(ctx.dataHandle, ctx.library);
+      await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
     } catch (err) {
       console.error(err);
       RI.toast("Could not save — " + (err && err.message ? err.message : "unknown error"), "error");
+    }
+  }
+
+  async function persistRatings() {
+    try {
+      await fs.writeRatings(ctx.dataHandle, ctx.ratingsData);
+    } catch (err) {
+      console.error(err);
+      RI.toast("Could not save rating — " + (err && err.message ? err.message : "unknown error"), "error");
     }
   }
 
@@ -130,6 +152,7 @@
 
     gridCoverUrls.forEach((url) => URL.revokeObjectURL(url));
     gridCoverUrls = new Map();
+    clearAllNudges();
 
     Array.from(grid.querySelectorAll(".book-card:not(.add-book-card)")).forEach((el) => el.remove());
     const existingEmpty = grid.querySelector(".empty-state");
@@ -152,6 +175,117 @@
       const card = await buildBookCard(book);
       grid.appendChild(card);
     }
+
+    await applyRatingNudges(allBooks, books);
+  }
+
+  // ---- ratings: nudge popups + star pickers ----
+
+  function removeNudge(bookId) {
+    const entry = activeNudges.get(bookId);
+    if (!entry) return;
+    if (entry.timerId) clearTimeout(entry.timerId);
+    entry.el.remove();
+    activeNudges.delete(bookId);
+  }
+
+  function clearAllNudges() {
+    Array.from(activeNudges.keys()).forEach(removeNudge);
+  }
+
+  function buildStarPicker(onPick) {
+    const picker = document.createElement("div");
+    picker.className = "star-picker";
+    for (let v = 5; v >= 1; v--) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "star-btn";
+      btn.dataset.value = String(v);
+      btn.setAttribute("aria-label", `${v} star${v === 1 ? "" : "s"}`);
+      btn.textContent = "★";
+      btn.addEventListener("click", () => onPick(v));
+      picker.appendChild(btn);
+    }
+    return picker;
+  }
+
+  function setStarPickerValue(picker, value) {
+    Array.from(picker.querySelectorAll(".star-btn")).forEach((btn) => {
+      btn.classList.toggle("is-filled", Number(btn.dataset.value) <= value);
+    });
+  }
+
+  function positionNudge(bubble, cardEl) {
+    const rect = cardEl.getBoundingClientRect();
+    const bubbleWidth = 188;
+    const gap = 10;
+    let left = rect.right + gap + window.scrollX;
+    const maxLeft = window.scrollX + document.documentElement.clientWidth - bubbleWidth - 8;
+    if (left > maxLeft) left = rect.left - bubbleWidth - gap + window.scrollX;
+    if (left < window.scrollX + 8) left = window.scrollX + 8;
+    bubble.style.left = `${Math.round(left)}px`;
+    bubble.style.top = `${Math.round(rect.top + window.scrollY)}px`;
+  }
+
+  function showRatingNudge(book, cardEl) {
+    removeNudge(book.id);
+    const bubble = document.createElement("div");
+    bubble.className = "rating-nudge";
+
+    const text = document.createElement("p");
+    text.textContent = "Liked it? Hated it? Rate it.";
+    bubble.appendChild(text);
+
+    bubble.appendChild(
+      buildStarPicker(async (stars) => {
+        store.setRating(ctx.ratingsData, book.id, stars);
+        await persistRatings();
+        removeNudge(book.id);
+        await renderGrid();
+      })
+    );
+
+    document.body.appendChild(bubble);
+    positionNudge(bubble, cardEl);
+
+    const entry = { el: bubble, timerId: null };
+    const scheduleDismiss = () => {
+      if (entry.timerId) clearTimeout(entry.timerId);
+      entry.timerId = setTimeout(() => removeNudge(book.id), 7000);
+    };
+    bubble.addEventListener("mouseenter", scheduleDismiss);
+    bubble.addEventListener("focusin", scheduleDismiss);
+    activeNudges.set(book.id, entry);
+    scheduleDismiss();
+  }
+
+  // finished books always get a ratings.json row (even unrated); the shelf
+  // nudge only fires once per calendar day per book, and only for cards
+  // actually on screen right now
+  async function applyRatingNudges(allBooksList, renderedBooks) {
+    let ratingsChanged = false;
+    allBooksList.forEach((book) => {
+      if (!store.isBookFinished(ctx.library, book)) return;
+      const existed = !!store.getRating(ctx.ratingsData, book.id);
+      store.ensureRatingEntry(ctx.ratingsData, book.id);
+      if (!existed) ratingsChanged = true;
+    });
+
+    const todayISO = store.todayISODate();
+    const toNudge = renderedBooks.filter(
+      (book) => store.isBookFinished(ctx.library, book) && store.shouldShowRatingNudge(ctx.ratingsData, book.id, todayISO)
+    );
+    if (toNudge.length > 0) {
+      toNudge.forEach((book) => store.markRatingNudged(ctx.ratingsData, book.id, todayISO));
+      ratingsChanged = true;
+    }
+
+    if (ratingsChanged) await persistRatings();
+
+    toNudge.forEach((book) => {
+      const cardEl = grid.querySelector(`.book-card[data-book-id="${book.id}"]`);
+      if (cardEl) showRatingNudge(book, cardEl);
+    });
   }
 
   async function buildBookCard(book) {
@@ -259,12 +393,29 @@
     meta.appendChild(track);
     meta.appendChild(stats);
 
+    const rating = store.getRating(ctx.ratingsData, book.id);
+    if (rating && rating.stars) {
+      meta.appendChild(buildStarRow(rating.stars));
+    }
+
     card.appendChild(coverWrap);
     card.appendChild(meta);
 
     attachCardInteractions(card, book.id);
 
     return card;
+  }
+
+  function buildStarRow(stars) {
+    const row = document.createElement("div");
+    row.className = "book-rating";
+    for (let i = 1; i <= 5; i++) {
+      const star = document.createElement("span");
+      star.className = "star" + (i <= stars ? " is-filled" : "");
+      star.textContent = "★";
+      row.appendChild(star);
+    }
+    return row;
   }
 
   // short delay tells a single click apart from a double click's first half
@@ -305,7 +456,8 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (isOverlayOpen(logModalOverlay)) closeLogModal();
+    if (isOverlayOpen(rateModalOverlay)) closeRateModal();
+    else if (isOverlayOpen(logModalOverlay)) closeLogModal();
     else if (isOverlayOpen(bookModalOverlay)) closeBookModal();
   });
 
@@ -314,6 +466,72 @@
   });
   logModalOverlay.addEventListener("click", (e) => {
     if (e.target === logModalOverlay) closeLogModal();
+  });
+  rateModalOverlay.addEventListener("click", (e) => {
+    if (e.target === rateModalOverlay) closeRateModal();
+  });
+
+  async function openRateModal(bookId) {
+    const book = store.getBookById(ctx.library, bookId);
+    if (!book) return;
+    rateModalBookId = bookId;
+    if (rateModalCoverUrl) {
+      URL.revokeObjectURL(rateModalCoverUrl);
+      rateModalCoverUrl = null;
+    }
+    rateModalBookEl.innerHTML = "";
+    const url = await resolveCoverUrl(book);
+    if (url) {
+      rateModalCoverUrl = url;
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "";
+      rateModalBookEl.appendChild(img);
+    } else {
+      const ph = document.createElement("div");
+      ph.className = "book-cover-placeholder";
+      ph.textContent = book.title;
+      rateModalBookEl.appendChild(ph);
+    }
+    const info = document.createElement("div");
+    info.className = "log-modal-book-info";
+    const title = document.createElement("p");
+    title.className = "title";
+    title.textContent = book.title;
+    info.appendChild(title);
+    rateModalBookEl.appendChild(info);
+
+    setStarPickerValue(rateModalPicker, 0);
+    showOverlay(rateModalOverlay);
+  }
+
+  function closeRateModal() {
+    rateModalOverlay.classList.add("hidden");
+    rateModalBookId = null;
+    if (rateModalCoverUrl) {
+      URL.revokeObjectURL(rateModalCoverUrl);
+      rateModalCoverUrl = null;
+    }
+  }
+
+  rateModalClose.addEventListener("click", closeRateModal);
+  rateModalSkip.addEventListener("click", closeRateModal);
+  rateModalPicker.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".star-btn");
+    if (!btn || !rateModalBookId) return;
+    store.setRating(ctx.ratingsData, rateModalBookId, Number(btn.dataset.value));
+    await persistRatings();
+    closeRateModal();
+    await renderGrid();
+  });
+
+  bookRatingPicker.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".star-btn");
+    if (!btn || !editingBookId) return;
+    const value = Number(btn.dataset.value);
+    store.setRating(ctx.ratingsData, editingBookId, value);
+    await persistRatings();
+    setStarPickerValue(bookRatingPicker, value);
   });
 
   function setCoverPreview(url) {
@@ -400,6 +618,7 @@
     setCoverPreview(null);
     setOwnership(null);
     renderCategoryChecklist([]);
+    bookRatingField.classList.add("hidden");
     bookModalDeleteRow.classList.add("hidden");
     bookFormError.textContent = "";
     showOverlay(bookModalOverlay);
@@ -422,6 +641,12 @@
     setCoverPreview(url);
     setOwnership(book.ownership || null);
     renderCategoryChecklist(book.categoryIds);
+    const finished = store.isBookFinished(ctx.library, book);
+    bookRatingField.classList.toggle("hidden", !finished);
+    if (finished) {
+      const rating = store.getRating(ctx.ratingsData, book.id);
+      setStarPickerValue(bookRatingPicker, rating ? rating.stars || 0 : 0);
+    }
     bookModalDeleteRow.classList.remove("hidden");
     bookFormError.textContent = "";
     showOverlay(bookModalOverlay);
@@ -733,7 +958,26 @@
       logDateInput.disabled = false;
       logDateInput.value = store.todayISODate();
       if (!finished) logPagesInput.focus();
+
+      // if this log just finished the book, the rate-modal is about to take
+      // over the "nudge" job for today, so mark it nudged now — otherwise
+      // renderGrid()'s nudge pass would also pop the corner bubble underneath it
+      let willOpenRateModal = false;
+      if (finished) {
+        const rating = store.getRating(ctx.ratingsData, logModalBookId);
+        if (!rating || !rating.stars) {
+          willOpenRateModal = true;
+          store.markRatingNudged(ctx.ratingsData, logModalBookId, store.todayISODate());
+          await persistRatings();
+        }
+      }
+
       await renderGrid();
+
+      if (willOpenRateModal) {
+        closeLogModal();
+        await openRateModal(logModalBookId);
+      }
     } catch (err) {
       console.error(err);
       logFormError.textContent = "Could not save: " + (err && err.message ? err.message : "unknown error");

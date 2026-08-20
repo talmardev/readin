@@ -407,6 +407,57 @@ RI.store = (function () {
     return { inProgress, notStarted, finished };
   }
 
+  function createDefaultRatings() {
+    return { ratings: [] };
+  }
+
+  function getRating(ratingsData, bookId) {
+    return ratingsData.ratings.find((r) => r.bookId === bookId) || null;
+  }
+
+  // every finished book gets a row here eventually, even before it's rated —
+  // stars stays null and lastNudgedDate tracks the once-a-day shelf nudge
+  function ensureRatingEntry(ratingsData, bookId) {
+    let entry = getRating(ratingsData, bookId);
+    if (!entry) {
+      entry = {
+        id: generateId(),
+        bookId,
+        stars: null,
+        lastNudgedDate: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      ratingsData.ratings.push(entry);
+    }
+    return entry;
+  }
+
+  function setRating(ratingsData, bookId, stars) {
+    const entry = ensureRatingEntry(ratingsData, bookId);
+    entry.stars = Math.max(1, Math.min(5, Math.round(Number(stars) || 0)));
+    entry.updatedAt = new Date().toISOString();
+    return entry;
+  }
+
+  function markRatingNudged(ratingsData, bookId, todayISO) {
+    const entry = ensureRatingEntry(ratingsData, bookId);
+    entry.lastNudgedDate = todayISO || todayISODate();
+    entry.updatedAt = new Date().toISOString();
+    return entry;
+  }
+
+  // the shelf-side "Rate it" nudge: only for unrated finished books, and only
+  // once per calendar day per book
+  function shouldShowRatingNudge(ratingsData, bookId, todayISO) {
+    const today = todayISO || todayISODate();
+    const entry = getRating(ratingsData, bookId);
+    if (!entry || !entry.stars) {
+      return !entry || entry.lastNudgedDate !== today;
+    }
+    return false;
+  }
+
   function createReadSession(readsData, session) {
     const entry = {
       id: generateId(),
@@ -472,5 +523,12 @@ RI.store = (function () {
     bookHasCategory,
     groupedCategories,
     categoriesInUse,
+
+    createDefaultRatings,
+    getRating,
+    ensureRatingEntry,
+    setRating,
+    markRatingNudged,
+    shouldShowRatingNudge,
   };
 })();
