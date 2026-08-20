@@ -104,7 +104,7 @@
           if (level > 0) cell.classList.add("lvl-" + level);
           if (day.date === todayISO) cell.classList.add("is-today");
           const pagesLabel = pages > 0 ? `${pages} page${pages === 1 ? "" : "s"}` : "No reading";
-          cell.title = `${pagesLabel} — ${formatDateLong(day.date)}`;
+          cell.title = `${pagesLabel} on ${formatDateLong(day.date)}`;
         }
         heatmapGrid.appendChild(cell);
       });

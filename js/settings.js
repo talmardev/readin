@@ -21,7 +21,7 @@
       await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
     } catch (err) {
       console.error(err);
-      RI.toast("Could not save — " + (err && err.message ? err.message : "unknown error"), "error");
+      RI.toast("Could not save: " + (err && err.message ? err.message : "unknown error"), "error");
     }
   }
 
@@ -109,7 +109,7 @@
     } catch (err) {
       if (err && err.name === "AbortError") return; // user closed the save dialog
       console.error(err);
-      RI.toast("Could not export — " + (err && err.message ? err.message : "unknown error"), "error");
+      RI.toast("Could not export: " + (err && err.message ? err.message : "unknown error"), "error");
     } finally {
       exportCsvBtn.disabled = false;
     }

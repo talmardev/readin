@@ -84,7 +84,7 @@
       await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
     } catch (err) {
       console.error(err);
-      RI.toast("Could not save — " + (err && err.message ? err.message : "unknown error"), "error");
+      RI.toast("Could not save: " + (err && err.message ? err.message : "unknown error"), "error");
     }
   }
 
@@ -93,7 +93,7 @@
       await fs.writeRatings(ctx.dataHandle, ctx.ratingsData);
     } catch (err) {
       console.error(err);
-      RI.toast("Could not save rating — " + (err && err.message ? err.message : "unknown error"), "error");
+      RI.toast("Could not save rating: " + (err && err.message ? err.message : "unknown error"), "error");
     }
   }
 
@@ -700,7 +700,7 @@
     if (!bookCategoryChecklist.hasChildNodes()) {
       const note = document.createElement("p");
       note.className = "no-categories-note";
-      note.textContent = "No categories yet — add some from Settings.";
+      note.textContent = "Add categories from Settings to get started.";
       bookCategoryChecklist.appendChild(note);
     }
   }
@@ -978,7 +978,7 @@
     logForm.classList.toggle("hidden", finished);
     if (!finished) {
       logPagesInput.max = remaining;
-      logPagesHint.textContent = `How many pages since your last log — not the page you're on. ${remaining} page${remaining === 1 ? "" : "s"} left.`;
+      logPagesHint.textContent = `Pages read since your last log, not your current page. ${remaining} page${remaining === 1 ? "" : "s"} left.`;
     }
     return { remaining, finished };
   }

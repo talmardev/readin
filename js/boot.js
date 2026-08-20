@@ -91,7 +91,7 @@ RI.boot = function (onReady) {
     if (!RI.fs.isSupported()) {
       titleEl.textContent = "Browser not supported";
       textEl.textContent =
-        "read.in stores your library as real files on your computer, which needs the File System Access API. That's only available in Chrome or Edge right now — please open this app there.";
+        "read.in uses the File System Access API to store your library as real files, which only works in Chrome or Edge. Please open this app there.";
       actionBtn.classList.add("hidden");
       altBtn.classList.add("hidden");
       return;

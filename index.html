@@ -17,7 +17,7 @@
     <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
     <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
     <div id="setup-error" class="setup-warning hidden" role="alert"></div>
-    <p class="setup-note">read.in only works in Chrome or Edge, and stores everything locally — nothing ever leaves your computer.</p>
+    <p class="setup-note">read.in only works in Chrome or Edge and keeps everything on your computer.</p>
   </div>
 </div>
 
@@ -140,14 +140,14 @@
     <div class="log-modal-book" id="log-modal-book"></div>
 
     <p class="finished-note hidden" id="log-finished-note">
-      You've read all of this book — it's done! Logging is closed unless you delete a log below.
+      This book is finished, so logging is closed unless you delete a log below.
     </p>
 
     <form id="log-form" novalidate>
       <div class="field">
         <label for="log-pages-input">Pages read</label>
         <input type="number" id="log-pages-input" min="1" step="1" required placeholder="25" />
-        <p class="hint" id="log-pages-hint">How many pages since your last log — not the page you're on.</p>
+        <p class="hint" id="log-pages-hint">Pages read since your last log, not your current page.</p>
       </div>
       <div class="field" id="log-date-field">
         <label for="log-date-input">Date</label>
@@ -156,7 +156,7 @@
       <div class="field">
         <label class="checkbox-row" for="log-past-checkbox">
           <input type="checkbox" id="log-past-checkbox" />
-          <span class="checkbox-label">Past read (before I started tracking — no exact date)</span>
+          <span class="checkbox-label">Past read (no exact date)</span>
         </label>
       </div>
       <p class="error-text" id="log-form-error"></p>

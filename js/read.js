@@ -216,7 +216,7 @@
     row.className = "log-row read-book-row" + (tier.disabled ? " is-disabled" : "");
     if (tier.disabled) {
       row.disabled = true;
-      row.title = "Rereads aren't supported yet — logging is closed once a book is finished.";
+      row.title = "Rereads aren't supported yet, so logging is closed once a book is finished.";
     }
 
     const url = book.coverFile ? await fs.readCoverAsURL(ctx.coversHandle, book.coverFile) : null;
@@ -516,7 +516,7 @@
       await fs.writeRatings(ctx.dataHandle, ctx.ratingsData);
     } catch (err) {
       console.error(err);
-      RI.toast("Could not save rating — " + (err && err.message ? err.message : "unknown error"), "error");
+      RI.toast("Could not save rating: " + (err && err.message ? err.message : "unknown error"), "error");
     }
   }
 
