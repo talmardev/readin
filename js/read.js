@@ -50,6 +50,7 @@
   const finishedEndEl = document.getElementById("finished-end-time");
   const finishedForm = document.getElementById("finished-form");
   const finishedPagesInput = document.getElementById("finished-pages-input");
+  const finishedStoppedInput = document.getElementById("finished-stopped-input");
   const finishedFormError = document.getElementById("finished-form-error");
   const finishedSaveBtn = document.getElementById("finished-save-btn");
 
@@ -63,6 +64,11 @@
   const rateModalSkip = document.getElementById("rate-modal-skip");
   let rateModalBookId = null;
   let pendingSavedSummary = null;
+
+  // pages already logged for the finished session's book — the offset that
+  // converts between "pages read this session" and "stopped at page"
+  let finishedPagesAlready = 0;
+  let finishedLastEditedStopped = false;
 
   const RADIUS = timerRingProgress.r.baseVal.value; // derived from the SVG, not hand-copied
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -503,11 +509,43 @@
       finishedCoverImg.classList.add("hidden");
     }
 
+    const progress = store.progressForBook(ctx.library, book);
+    finishedPagesAlready = progress.pagesRead;
+    finishedLastEditedStopped = false;
     const remaining = store.remainingPages(ctx.library, book);
     finishedPagesInput.value = "";
     finishedPagesInput.max = remaining > 0 ? remaining : "";
+    finishedStoppedInput.value = "";
+    finishedStoppedInput.min = progress.pagesRead + 1;
+    finishedStoppedInput.max = progress.totalPages;
     finishedFormError.textContent = "";
   }
+
+  // the two finish-screen inputs are two views of one value:
+  //   stoppedAtPage = pagesAlreadyRead + pagesReadThisSession
+  // editing either recomputes the other. Setting .value in JS doesn't fire an
+  // "input" event, so these handlers can't bounce off each other.
+  finishedPagesInput.addEventListener("input", () => {
+    finishedLastEditedStopped = false;
+    if (finishedPagesInput.value === "") {
+      finishedStoppedInput.value = "";
+      return;
+    }
+    const pages = Math.round(Number(finishedPagesInput.value));
+    if (!Number.isFinite(pages)) return;
+    finishedStoppedInput.value = finishedPagesAlready + pages;
+  });
+
+  finishedStoppedInput.addEventListener("input", () => {
+    finishedLastEditedStopped = true;
+    if (finishedStoppedInput.value === "") {
+      finishedPagesInput.value = "";
+      return;
+    }
+    const stopped = Math.round(Number(finishedStoppedInput.value));
+    if (!Number.isFinite(stopped)) return;
+    finishedPagesInput.value = stopped - finishedPagesAlready;
+  });
 
   // ---- rating modal ----
 
@@ -639,7 +677,9 @@
     }
     const pages = Number(finishedPagesInput.value);
     if (!pages || pages < 1) {
-      finishedFormError.textContent = "Enter at least 1 page.";
+      finishedFormError.textContent = finishedLastEditedStopped
+        ? "The page you stopped on must be past where you already are."
+        : "Enter at least 1 page.";
       return;
     }
     const remaining = store.remainingPages(ctx.library, book);

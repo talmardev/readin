@@ -22,6 +22,12 @@
 
   let logModalBookId = null;
   let logModalCoverUrl = null;
+  // pages already logged for the book in the open log modal — the offset that
+  // converts between "pages read this session" and "stopped at page"
+  let logModalPagesAlready = 0;
+  // which of the two log inputs the user last typed into, so an error can be
+  // phrased in their terms ("pages read" vs. "stopped at page")
+  let logLastEditedStopped = false;
 
   const grid = document.getElementById("book-grid");
   const addBookCard = document.getElementById("add-book-card");
@@ -58,6 +64,7 @@
   const logForm = document.getElementById("log-form");
   const logPagesInput = document.getElementById("log-pages-input");
   const logPagesHint = document.getElementById("log-pages-hint");
+  const logStoppedInput = document.getElementById("log-stopped-input");
   const logDateField = document.getElementById("log-date-field");
   const logDateInput = document.getElementById("log-date-input");
   const logPastCheckbox = document.getElementById("log-past-checkbox");
@@ -972,6 +979,8 @@
 
   // toggles the log form vs. the "finished" note based on pages left to read
   function applyRemainingPagesState(book) {
+    const progress = store.progressForBook(ctx.library, book);
+    logModalPagesAlready = progress.pagesRead;
     const remaining = store.remainingPages(ctx.library, book);
     const finished = remaining <= 0;
     logFinishedNote.classList.toggle("hidden", !finished);
@@ -979,9 +988,42 @@
     if (!finished) {
       logPagesInput.max = remaining;
       logPagesHint.textContent = `Pages read since your last log, not your current page. ${remaining} page${remaining === 1 ? "" : "s"} left.`;
+      // "stopped at page" is the same log expressed as an absolute page: it can
+      // land anywhere past what's already been read, up to the last page
+      logStoppedInput.min = progress.pagesRead + 1;
+      logStoppedInput.max = progress.totalPages;
     }
     return { remaining, finished };
   }
+
+  // the two log inputs are two views of one value:
+  //   stoppedAtPage = pagesAlreadyRead + pagesReadThisSession
+  // editing either one recomputes the other. Setting .value in JS doesn't fire
+  // an "input" event, so these handlers can't bounce off each other.
+  function syncStoppedFromPages() {
+    logLastEditedStopped = false;
+    if (logPagesInput.value === "") {
+      logStoppedInput.value = "";
+      return;
+    }
+    const pages = Math.round(Number(logPagesInput.value));
+    if (!Number.isFinite(pages)) return;
+    logStoppedInput.value = logModalPagesAlready + pages;
+  }
+
+  function syncPagesFromStopped() {
+    logLastEditedStopped = true;
+    if (logStoppedInput.value === "") {
+      logPagesInput.value = "";
+      return;
+    }
+    const stopped = Math.round(Number(logStoppedInput.value));
+    if (!Number.isFinite(stopped)) return;
+    logPagesInput.value = stopped - logModalPagesAlready;
+  }
+
+  logPagesInput.addEventListener("input", syncStoppedFromPages);
+  logStoppedInput.addEventListener("input", syncPagesFromStopped);
 
   async function openLogModal(bookId) {
     const book = store.getBookById(ctx.library, bookId);
@@ -994,6 +1036,8 @@
     logDateField.classList.remove("hidden");
     logDateInput.disabled = false;
     logPagesInput.value = "";
+    logStoppedInput.value = "";
+    logLastEditedStopped = false;
     await renderLogModalBookInfo(book);
     const { finished } = applyRemainingPagesState(book);
     renderRecentLogs(bookId);
@@ -1027,7 +1071,9 @@
     e.preventDefault();
     const pages = Number(logPagesInput.value);
     if (!pages || pages < 1) {
-      logFormError.textContent = "Enter at least 1 page.";
+      logFormError.textContent = logLastEditedStopped
+        ? "The page you stopped on must be past where you already are."
+        : "Enter at least 1 page.";
       return;
     }
     const bookBefore = store.getBookById(ctx.library, logModalBookId);
@@ -1056,6 +1102,7 @@
       const { finished } = applyRemainingPagesState(book);
       renderRecentLogs(logModalBookId);
       logPagesInput.value = "";
+      logStoppedInput.value = "";
       logPastCheckbox.checked = false;
       logDateField.classList.remove("hidden");
       logDateInput.disabled = false;
