@@ -24,8 +24,8 @@ RI.boot = function (onReady) {
   function setStateSetup() {
     titleEl.textContent = "Set up your library";
     textEl.textContent =
-      "Pick the folder this app lives in. read.in will create a data/ folder inside it to store your books, covers, and reading logs as real files on disk.";
-    actionBtn.textContent = "Choose the read.in folder";
+      "Pick the folder this app lives in. readin' will create a data/ folder inside it to store your books, covers, and reading logs as real files on disk.";
+    actionBtn.textContent = "Choose the readin' folder";
     actionBtn.classList.remove("hidden");
     actionBtn.onclick = handleChooseFolder;
     altBtn.classList.add("hidden");
@@ -34,7 +34,7 @@ RI.boot = function (onReady) {
   function setStateGrant() {
     titleEl.textContent = "Welcome back";
     textEl.textContent =
-      "read.in needs permission to read and write your data folder again this session.";
+      "readin' needs permission to read and write your data folder again this session.";
     actionBtn.textContent = "Continue to your library";
     actionBtn.classList.remove("hidden");
     actionBtn.onclick = handleGrantPermission;
@@ -77,7 +77,7 @@ RI.boot = function (onReady) {
       const rootHandle = await RI.fs.getStoredRootHandle();
       const perm = await RI.fs.requestPermission(rootHandle);
       if (perm !== "granted") {
-        showError("Access was not granted, so read.in cannot load your library.");
+        showError("Access was not granted, so readin' cannot load your library.");
         return;
       }
       await proceedWithRoot(rootHandle);
@@ -91,7 +91,7 @@ RI.boot = function (onReady) {
     if (!RI.fs.isSupported()) {
       titleEl.textContent = "Browser not supported";
       textEl.textContent =
-        "read.in uses the File System Access API to store your library as real files, which only works in Chrome or Edge. Please open this app there.";
+        "readin' uses the File System Access API to store your library as real files, which only works in Chrome or Edge. Please open this app there.";
       actionBtn.classList.add("hidden");
       altBtn.classList.add("hidden");
       return;

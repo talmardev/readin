@@ -103,7 +103,7 @@
     exportCsvBtn.disabled = true;
     try {
       const csv = store.libraryToCSV(ctx.library, ctx.ratingsData);
-      const filename = `read.in-library-${store.todayISODate()}.csv`;
+      const filename = `readin-library-${store.todayISODate()}.csv`;
       await fs.saveCsvAs(filename, csv);
       RI.toast("Exported library to CSV.");
     } catch (err) {

@@ -227,7 +227,7 @@ RI.fs = (function () {
 
   // one-off exports go through the native Save As dialog rather than the
   // app's own data/ folder handle — this is the user picking a destination
-  // outside read.in's own storage, not a read.in-managed file
+  // outside readin's own storage, not a readin-managed file
   async function saveCsvAs(suggestedName, csvText) {
     const handle = await window.showSaveFilePicker({
       suggestedName,

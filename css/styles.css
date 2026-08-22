@@ -108,17 +108,10 @@ a {
   color: var(--ink);
 }
 
-.brand img {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-}
-
-.brand .wordmark {
-  height: 20px;
+.brand-logo {
+  height: 24px;
   width: auto;
   display: block;
-  border-radius: 0;
 }
 
 .header-right {
@@ -470,11 +463,10 @@ input[disabled] {
 }
 
 .setup-card img.setup-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  margin: 0 auto 20px;
-  box-shadow: var(--shadow-sm);
+  width: auto;
+  height: 44px;
+  max-width: 80%;
+  margin: 0 auto 24px;
 }
 
 .setup-card h1 {
