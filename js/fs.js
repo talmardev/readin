@@ -84,8 +84,31 @@ RI.fs = (function () {
     return handle.requestPermission({ mode: "readwrite" });
   }
 
+  // Is this folder itself already a readin' data folder? True if it directly
+  // holds one of our JSON files, or it's simply named "data". Lets a user
+  // point the picker straight at an existing data/ folder (e.g. to switch to
+  // a backup or move their library) without us nesting a fresh data/data
+  // inside it and ignoring the data that was already there.
+  async function looksLikeDataDir(handle) {
+    if (handle.name && handle.name.toLowerCase() === "data") return true;
+    const markers = [LIBRARY_FILE, LOGS_FILE, READS_FILE, RATINGS_FILE];
+    for (const name of markers) {
+      try {
+        await handle.getFileHandle(name, { create: false });
+        return true;
+      } catch (err) {
+        if (!err || err.name !== "NotFoundError") throw err;
+      }
+    }
+    return false;
+  }
+
   async function ensureDataDirs(rootHandle) {
-    const dataHandle = await rootHandle.getDirectoryHandle("data", { create: true });
+    // If the picked folder already IS the data folder, use it directly instead
+    // of creating a nested data/ inside it.
+    const dataHandle = (await looksLikeDataDir(rootHandle))
+      ? rootHandle
+      : await rootHandle.getDirectoryHandle("data", { create: true });
     const coversHandle = await dataHandle.getDirectoryHandle("covers", { create: true });
     return { dataHandle, coversHandle };
   }
