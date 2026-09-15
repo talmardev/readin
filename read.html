@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>readin' — Read</title>
+<title>readin' - Read</title>
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -12,12 +12,12 @@
 <div id="setup-screen" class="setup-screen">
   <div class="setup-card">
     <img src="readin_logo.svg" class="setup-icon" alt="" />
-    <h1 id="setup-title">Loading readin'…</h1>
-    <p id="setup-text">One moment.</p>
+    <h1 id="setup-title" data-i18n="setup.loading">Loading readin'…</h1>
+    <p id="setup-text" data-i18n="setup.oneMoment">One moment.</p>
     <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
     <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
     <div id="setup-error" class="setup-warning hidden" role="alert"></div>
-    <p class="setup-note">readin' only works in Chrome or Edge and keeps everything on your computer.</p>
+    <p class="setup-note" data-i18n="setup.footerNote">readin' only works in Chrome or Edge and keeps everything on your computer.</p>
   </div>
 </div>
 
@@ -28,11 +28,11 @@
     </a>
     <div class="header-right">
       <nav class="header-nav">
-        <a href="index.html" class="nav-link">Library</a>
-        <a href="streak.html" class="nav-link">Stats</a>
-        <a href="settings.html" class="nav-link">Settings</a>
+        <a href="index.html" class="nav-link" data-i18n="nav.library">Library</a>
+        <a href="streak.html" class="nav-link" data-i18n="nav.stats">Stats</a>
+        <a href="settings.html" class="nav-link" data-i18n="nav.settings">Settings</a>
       </nav>
-      <a href="read.html" class="btn-read">Read</a>
+      <a href="read.html" class="btn-read" data-i18n="nav.read">Read</a>
     </div>
   </header>
 
@@ -41,21 +41,21 @@
     <section id="read-step-book" class="read-step">
       <div class="page-title-row">
         <div>
-          <h1 class="page-title">What are you reading?</h1>
-          <p class="page-subtitle">Pick a book to start a timed session.</p>
+          <h1 class="page-title" data-i18n="read.pickBookTitle">What are you reading?</h1>
+          <p class="page-subtitle" data-i18n="read.pickBookSubtitle">Pick a book to start a timed session.</p>
         </div>
       </div>
       <div id="read-book-groups"></div>
-      <p class="empty-note hidden" id="read-no-books">Add a book to your shelf first.</p>
+      <p class="empty-note hidden" id="read-no-books" data-i18n="read.noBooks">Add a book to your shelf first.</p>
     </section>
 
     <section id="read-step-duration" class="read-step hidden">
-      <button type="button" class="btn btn-text" id="read-duration-back">&larr; Choose a different book</button>
+      <button type="button" class="btn btn-text" id="read-duration-back" data-i18n="read.backToBookPicker">&larr; Choose a different book</button>
       <div class="log-modal-book" id="duration-book"></div>
       <h2 class="section-title" id="duration-heading">How long are you reading?</h2>
       <div class="mode-toggle" id="read-mode-toggle">
-        <button type="button" class="mode-toggle-btn is-active" data-mode="countdown">Countdown</button>
-        <button type="button" class="mode-toggle-btn" data-mode="stopwatch">Stopwatch</button>
+        <button type="button" class="mode-toggle-btn is-active" data-mode="countdown" data-i18n="read.modeCountdown">Countdown</button>
+        <button type="button" class="mode-toggle-btn" data-mode="stopwatch" data-i18n="read.modeStopwatch">Stopwatch</button>
       </div>
       <div id="duration-picker-fields">
         <div class="duration-chips" id="duration-chips">
@@ -66,13 +66,13 @@
           <button type="button" class="duration-chip" data-minutes="60">60 min</button>
         </div>
         <div class="field duration-custom-field">
-          <label for="duration-custom-input">Or a custom number of minutes</label>
+          <label for="duration-custom-input" data-i18n="read.customMinutesLabel">Or a custom number of minutes</label>
           <input type="number" id="duration-custom-input" min="1" step="1" placeholder="20" />
         </div>
       </div>
-      <p class="hint hidden" id="stopwatch-note">Counts up until you stop it.</p>
+      <p class="hint hidden" id="stopwatch-note" data-i18n="read.stopwatchNote">Counts up until you stop it.</p>
       <p class="error-text" id="duration-form-error"></p>
-      <button type="button" class="btn btn-primary btn-block" id="read-start-btn">Start reading</button>
+      <button type="button" class="btn btn-primary btn-block" id="read-start-btn" data-i18n="read.startReading">Start reading</button>
     </section>
 
     <section id="read-step-timer" class="read-step hidden">
@@ -108,30 +108,30 @@
 
         <div class="finished-stats">
           <div>
-            <p class="finished-stat-num" id="finished-time-read">—</p>
-            <p class="finished-stat-label">Time read</p>
+            <p class="finished-stat-num" id="finished-time-read">-</p>
+            <p class="finished-stat-label" data-i18n="read.timeReadLabel">Time read</p>
           </div>
           <div>
-            <p class="finished-stat-num" id="finished-start-time">—</p>
-            <p class="finished-stat-label">Started</p>
+            <p class="finished-stat-num" id="finished-start-time">-</p>
+            <p class="finished-stat-label" data-i18n="read.startedLabel">Started</p>
           </div>
           <div>
-            <p class="finished-stat-num" id="finished-end-time">—</p>
-            <p class="finished-stat-label">Ended</p>
+            <p class="finished-stat-num" id="finished-end-time">-</p>
+            <p class="finished-stat-label" data-i18n="read.endedLabel">Ended</p>
           </div>
         </div>
 
         <form id="finished-form" novalidate>
           <div class="field">
-            <label for="finished-pages-input">Pages read</label>
+            <label for="finished-pages-input" data-i18n="read.fieldPagesRead">Pages read</label>
             <input type="number" id="finished-pages-input" min="1" step="1" required placeholder="18" />
           </div>
           <div class="field">
-            <label for="finished-stopped-input">Stopped at page</label>
+            <label for="finished-stopped-input" data-i18n="read.fieldStoppedAtPage">Stopped at page</label>
             <input type="number" id="finished-stopped-input" min="1" step="1" placeholder="105" />
           </div>
           <p class="error-text" id="finished-form-error"></p>
-          <button type="submit" class="btn btn-primary btn-block" id="finished-save-btn">Save session</button>
+          <button type="submit" class="btn btn-primary btn-block" id="finished-save-btn" data-i18n="read.saveSession">Save session</button>
         </form>
       </div>
     </section>
@@ -139,11 +139,11 @@
     <section id="read-step-saved" class="read-step hidden">
       <div class="finished-card saved-card">
         <span class="stat-today-dot"></span>
-        <h1 class="page-title">Nice reading!</h1>
+        <h1 class="page-title" data-i18n="read.niceReading">Nice reading!</h1>
         <p class="page-subtitle" id="saved-summary"></p>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="saved-read-again-btn">Read another session</button>
-          <a href="index.html" class="btn btn-primary">Back to Library</a>
+          <button type="button" class="btn btn-secondary" id="saved-read-again-btn" data-i18n="read.readAnotherSession">Read another session</button>
+          <a href="index.html" class="btn btn-primary" data-i18n="read.backToLibrary">Back to Library</a>
         </div>
       </div>
     </section>
@@ -154,20 +154,24 @@
 <div id="rate-modal-overlay" class="modal-overlay hidden">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rate-modal-title">
     <div class="modal-header">
-      <h2 class="modal-title" id="rate-modal-title">You finished it!</h2>
-      <button type="button" class="modal-close" id="rate-modal-close" aria-label="Close">&times;</button>
+      <h2 class="modal-title" id="rate-modal-title" data-i18n="library.rateModalTitle">You finished it!</h2>
+      <button type="button" class="modal-close" id="rate-modal-close" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
     </div>
     <div class="log-modal-book" id="rate-modal-book"></div>
-    <p class="hint" style="margin-bottom: 14px;">How would you rate it?</p>
+    <p class="hint" style="margin-bottom: 14px;" data-i18n="library.rateModalQuestion">How would you rate it?</p>
     <div class="star-picker" id="rate-modal-picker"></div>
     <div class="modal-actions">
-      <button type="button" class="btn btn-secondary" id="rate-modal-skip">Maybe later</button>
+      <button type="button" class="btn btn-secondary" id="rate-modal-skip" data-i18n="library.rateModalSkip">Maybe later</button>
     </div>
   </div>
 </div>
 
 <div id="toast-container" class="toast-container"></div>
 
+<script src="js/i18n.js"></script>
+<script src="js/i18n-en.js"></script>
+<script src="js/i18n-pt.js"></script>
+<script src="js/i18n-fr.js"></script>
 <script src="js/fs.js"></script>
 <script src="js/store.js"></script>
 <script src="js/boot.js"></script>
