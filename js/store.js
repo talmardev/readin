@@ -252,7 +252,7 @@ RI.store = (function () {
     return { pagesRead, totalPages, percent };
   }
 
-  // pages still loggable before the book hits 100% — never negative
+  // pages still loggable before the book hits 100%; never negative
   function remainingPages(library, book) {
     const progress = progressForBook(library, book);
     return Math.max(0, progress.totalPages - progress.pagesRead);
@@ -291,7 +291,7 @@ RI.store = (function () {
     });
   }
 
-  // only dated logs count here — past-read entries have no date
+  // only dated logs count here; past-read entries have no date
   function datedLogDateSet(library) {
     const set = new Set();
     for (const log of library.logs) {
@@ -360,7 +360,7 @@ RI.store = (function () {
     return library.books.filter((b) => isBookFinished(library, b)).length;
   }
 
-  // days from a finished book's first dated log to its last — past-read logs
+  // days from a finished book's first dated log to its last; past-read logs
   // (no date) can't anchor a span, so books finished only via past reads are
   // excluded rather than counted as "0 days"
   function averageDaysToComplete(library) {
@@ -391,7 +391,7 @@ RI.store = (function () {
   }
 
   // for the Read-timer book picker: in-progress books first, then unstarted
-  // (0 pages read), then finished books last — each tier keeps the library's
+  // (0 pages read), then finished books last; each tier keeps the library's
   // usual most-recent-activity ordering
   function groupBooksForReadPicker(library) {
     const sorted = sortedBooksForLibrary(library);
@@ -415,7 +415,7 @@ RI.store = (function () {
     return ratingsData.ratings.find((r) => r.bookId === bookId) || null;
   }
 
-  // every finished book gets a row here eventually, even before it's rated —
+  // every finished book gets a row here eventually, even before it's rated;
   // stars stays null and lastNudgedDate tracks the once-a-day shelf nudge
   function ensureRatingEntry(ratingsData, bookId) {
     let entry = getRating(ratingsData, bookId);
@@ -442,7 +442,7 @@ RI.store = (function () {
     return entry;
   }
 
-  // how "full" star slot `index` (1-5) should render for a given rating value —
+  // how "full" star slot `index` (1-5) should render for a given rating value:
   // 1 = fully filled, 0.5 = half filled, 0 = empty. Shared by both the
   // non-interactive card display and the interactive star pickers so a value
   // like 3.5 renders identically everywhere.
@@ -533,6 +533,37 @@ RI.store = (function () {
     return entry;
   }
 
+  function createDefaultWishlist() {
+    return { items: [] };
+  }
+
+  // title required, author/link optional; deliberately no totalPages/cover/
+  // categories, a wishlist entry is just enough to remember a book exists
+  function createWishlistItem(wishlistData, { title, author, link }) {
+    const item = {
+      id: generateId(),
+      title: (title || "").trim(),
+      author: (author || "").trim(),
+      link: (link || "").trim() || null,
+      createdAt: new Date().toISOString(),
+    };
+    wishlistData.items.push(item);
+    return item;
+  }
+
+  function deleteWishlistItem(wishlistData, itemId) {
+    const idx = wishlistData.items.findIndex((i) => i.id === itemId);
+    if (idx === -1) return null;
+    const [removed] = wishlistData.items.splice(idx, 1);
+    return removed;
+  }
+
+  function sortedWishlistItems(wishlistData) {
+    return wishlistData.items
+      .slice()
+      .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+  }
+
   return {
     generateId,
     toISODate,
@@ -588,6 +619,11 @@ RI.store = (function () {
     starFraction,
     markRatingNudged,
     shouldShowRatingNudge,
+
+    createDefaultWishlist,
+    createWishlistItem,
+    deleteWishlistItem,
+    sortedWishlistItems,
 
     libraryToCSV,
   };

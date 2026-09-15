@@ -3,6 +3,7 @@
 
   const store = RI.store;
   const fs = RI.fs;
+  const t = RI.i18n.t;
 
   const SESSION_STORAGE_KEY = "readin-active-read-session";
   const TICK_MS = 250;
@@ -65,7 +66,7 @@
   let rateModalBookId = null;
   let pendingSavedSummary = null;
 
-  // pages already logged for the finished session's book — the offset that
+  // pages already logged for the finished session's book: the offset that
   // converts between "pages read this session" and "stopped at page"
   let finishedPagesAlready = 0;
   let finishedLastEditedStopped = false;
@@ -113,7 +114,7 @@
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || !parsed.bookId || !parsed.startedAt) return null;
-      // sessions saved before stopwatch mode existed have no `mode` field —
+      // sessions saved before stopwatch mode existed have no `mode` field;
       // they were always countdown sessions, so default them to that
       const mode = parsed.mode === "stopwatch" ? "stopwatch" : "countdown";
       if (mode === "countdown" && !parsed.plannedMinutes) return null;
@@ -156,7 +157,7 @@
   }
 
   function formatClockTime(iso) {
-    return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return new Date(iso).toLocaleTimeString(RI.i18n.getLocale(), { hour: "numeric", minute: "2-digit" });
   }
 
   // ---- cover url helpers ----
@@ -207,11 +208,11 @@
     const parts = [];
     if (book.author) parts.push(book.author);
     if (tierKey === "inProgress") {
-      parts.push(`${store.progressForBook(ctx.library, book).percent}% read`);
+      parts.push(t("read.percentRead", { percent: store.progressForBook(ctx.library, book).percent }));
     } else if (tierKey === "notStarted") {
-      parts.push("Not started");
+      parts.push(t("read.notStarted"));
     } else {
-      parts.push("Finished");
+      parts.push(t("read.finishedTag"));
     }
     return parts.join(" · ");
   }
@@ -222,7 +223,7 @@
     row.className = "log-row read-book-row" + (tier.disabled ? " is-disabled" : "");
     if (tier.disabled) {
       row.disabled = true;
-      row.title = "Rereads aren't supported yet, so logging is closed once a book is finished.";
+      row.title = t("read.disabledRowTitle");
     }
 
     const url = book.coverFile ? await fs.readCoverAsURL(ctx.coversHandle, book.coverFile) : null;
@@ -264,9 +265,9 @@
 
     const groups = store.groupBooksForReadPicker(ctx.library);
     const tiers = [
-      { key: "inProgress", label: "Continue reading", books: groups.inProgress, disabled: false },
-      { key: "notStarted", label: "Start something new", books: groups.notStarted, disabled: false },
-      { key: "finished", label: "Finished", books: groups.finished, disabled: true },
+      { key: "inProgress", label: t("read.tierContinue"), books: groups.inProgress, disabled: false },
+      { key: "notStarted", label: t("read.tierStartNew"), books: groups.notStarted, disabled: false },
+      { key: "finished", label: t("read.tierFinished"), books: groups.finished, disabled: true },
     ];
 
     let any = false;
@@ -327,7 +328,7 @@
     });
     durationPickerFieldsEl.classList.toggle("hidden", mode === "stopwatch");
     stopwatchNoteEl.classList.toggle("hidden", mode !== "stopwatch");
-    durationHeadingEl.textContent = mode === "stopwatch" ? "Ready to start reading?" : "How long are you reading?";
+    durationHeadingEl.textContent = mode === "stopwatch" ? t("read.durationHeadingStopwatch") : t("read.durationHeadingCountdown");
     durationFormError.textContent = "";
   }
 
@@ -348,7 +349,7 @@
     if (selectedMode === "countdown") {
       minutes = Math.round(Number(durationCustomInput.value));
       if (!minutes || minutes < 1) {
-        durationFormError.textContent = "Enter at least 1 minute.";
+        durationFormError.textContent = t("read.errAtLeast1Minute");
         return;
       }
     }
@@ -395,17 +396,17 @@
 
   function setPauseUI(isPaused) {
     timerRingWrap.classList.toggle("is-paused", isPaused);
-    pauseBtn.textContent = isPaused ? "Continue Reading" : "Bathroom Break";
+    pauseBtn.textContent = isPaused ? t("read.resumeBtn") : t("read.pauseBtn");
     pauseBtn.classList.toggle("btn-primary", isPaused);
     pauseBtn.classList.toggle("btn-secondary", !isPaused);
-    timerStateEl.textContent = isPaused ? "On a break" : "Reading";
+    timerStateEl.textContent = isPaused ? t("read.timerStatePaused") : t("read.timerStateReading");
   }
 
   function tick() {
     const now = Date.now();
     if (session.mode === "stopwatch") {
       // stopwatch has no total to count down against, so the ring just
-      // stays fully lit (set once in enterTimerStep) as a "running" cue —
+      // stays fully lit (set once in enterTimerStep) as a "running" cue;
       // only the elapsed time counts up, and only "Stop Reading" ends it
       timerTimeEl.textContent = formatMMSS(activeMs(now));
       return;
@@ -431,7 +432,7 @@
     if (session.mode === "stopwatch") {
       timerRingProgress.style.strokeDashoffset = "0";
     }
-    endBtn.textContent = session.mode === "stopwatch" ? "Stop Reading" : "End Earlier";
+    endBtn.textContent = session.mode === "stopwatch" ? t("read.stopReadingBtn") : t("read.endEarlierBtn");
     showStep("timer");
     window.addEventListener("beforeunload", beforeUnloadHandler);
     if (tickTimer) clearInterval(tickTimer);
@@ -473,7 +474,7 @@
     let activeSecondsVal = Math.round(activeMs(now) / 1000);
     if (!endedEarly) {
       // natural timeout: anchor to the moment the clock actually hit zero,
-      // not to "now" — a backgrounded/throttled tab can call this well after
+      // not to "now": a backgrounded/throttled tab can call this well after
       // the fact, which would otherwise inflate time-read past the plan
       endedAtMs = Date.parse(session.startedAt) + plannedMs + session.pausedSeconds * 1000;
       activeSecondsVal = Math.round(plannedMs / 1000);
@@ -554,16 +555,16 @@
       await fs.writeRatings(ctx.dataHandle, ctx.ratingsData);
     } catch (err) {
       console.error(err);
-      RI.toast("Could not save rating: " + (err && err.message ? err.message : "unknown error"), "error");
+      RI.toast(t("common.couldNotSaveRatingPrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
     }
   }
 
   // one interactive star position: a visual glyph (bg + fg) plus two
-  // invisible half-width buttons stacked on top — clicking is a real DOM
+  // invisible half-width buttons stacked on top: clicking is a real DOM
   // element hit (dedicated "set to X.5" / "set to X" buttons), not
   // pixel-position math against getBoundingClientRect, so it's reliable
   // regardless of zoom/DPI/click precision, and every half-star is reachable
-  // by keyboard/Tab. Same approach as js/library.js's picker — kept
+  // by keyboard/Tab. Same approach as js/library.js's picker, kept
   // duplicated per this codebase's per-page style rather than factored into
   // a shared file.
   function buildStarSlot(index, onPick, onPreview) {
@@ -582,7 +583,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "star-half " + (half === 0 ? "star-half-lo" : "star-half-hi");
-      btn.setAttribute("aria-label", `${value} star${value === 1 ? "" : "s"}`);
+      btn.setAttribute("aria-label", t("common.starsAria", { count: value, value }));
       btn.addEventListener("mouseenter", () => onPreview(value));
       btn.addEventListener("focus", () => onPreview(value));
       btn.addEventListener("click", () => onPick(value));
@@ -672,23 +673,23 @@
     e.preventDefault();
     const book = store.getBookById(ctx.library, session.bookId);
     if (!book) {
-      finishedFormError.textContent = "This book no longer exists.";
+      finishedFormError.textContent = t("read.errBookGone");
       return;
     }
     const pages = Number(finishedPagesInput.value);
     if (!pages || pages < 1) {
       finishedFormError.textContent = finishedLastEditedStopped
-        ? "The page you stopped on must be past where you already are."
-        : "Enter at least 1 page.";
+        ? t("read.errStoppedMustBePast")
+        : t("read.errEnterAtLeast1Page");
       return;
     }
     const remaining = store.remainingPages(ctx.library, book);
     if (remaining <= 0) {
-      finishedFormError.textContent = "This book is already finished.";
+      finishedFormError.textContent = t("read.errAlreadyFinished");
       return;
     }
     if (pages > remaining) {
-      finishedFormError.textContent = `Only ${remaining} page${remaining === 1 ? "" : "s"} left in this book.`;
+      finishedFormError.textContent = t("read.errOnlyNPagesLeft", { count: remaining, n: remaining });
       return;
     }
     finishedFormError.textContent = "";
@@ -718,11 +719,11 @@
       await fs.writeReads(ctx.dataHandle, readsData);
 
       clearSessionStorage();
-      const summary = `Logged ${pages} page${pages === 1 ? "" : "s"} for "${book.title}".`;
+      const summary = t("read.savedSummary", { count: pages, n: pages, title: book.title });
       const bookId = session.bookId;
       session = null;
 
-      // this log just finished the book (remaining was checked >0 above) —
+      // this log just finished the book (remaining was checked >0 above):
       // offer the rating modal before showing the plain "saved" screen
       const justFinished = store.isBookFinished(ctx.library, store.getBookById(ctx.library, bookId));
       if (justFinished) {
@@ -740,7 +741,7 @@
       showStep("saved");
     } catch (err) {
       console.error(err);
-      finishedFormError.textContent = "Could not save: " + (err && err.message ? err.message : "unknown error");
+      finishedFormError.textContent = t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError"));
     } finally {
       finishedSaveBtn.disabled = false;
     }
@@ -754,8 +755,26 @@
 
   // ---- boot ----
 
+  function setDocTitle() {
+    document.title = "readin' - " + t("nav.read");
+  }
+
+  RI.i18n.onChange(async () => {
+    setDocTitle();
+    if (!ctx) return;
+    // re-render whichever step is currently visible so a language switch
+    // mid-flow updates instantly instead of only on the next navigation
+    if (!stepEls.book.classList.contains("hidden")) await renderBookPicker();
+    else if (!stepEls.duration.classList.contains("hidden")) setMode(selectedMode);
+    else if (!stepEls.timer.classList.contains("hidden")) {
+      setPauseUI(!!session.pauseStartedAt);
+      endBtn.textContent = session.mode === "stopwatch" ? t("read.stopReadingBtn") : t("read.endEarlierBtn");
+    } else if (!stepEls.finished.classList.contains("hidden")) await renderFinishedStep();
+  });
+
   RI.boot(async (bootCtx) => {
     ctx = bootCtx;
+    setDocTitle();
     readsData = await fs.readReads(ctx.dataHandle);
 
     const saved = loadSessionFromStorage();

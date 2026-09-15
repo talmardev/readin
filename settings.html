@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>readin' — Settings</title>
+<title>readin' - Settings</title>
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -12,12 +12,12 @@
 <div id="setup-screen" class="setup-screen">
   <div class="setup-card">
     <img src="readin_logo.svg" class="setup-icon" alt="" />
-    <h1 id="setup-title">Loading readin'…</h1>
-    <p id="setup-text">One moment.</p>
+    <h1 id="setup-title" data-i18n="setup.loading">Loading readin'…</h1>
+    <p id="setup-text" data-i18n="setup.oneMoment">One moment.</p>
     <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
     <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
     <div id="setup-error" class="setup-warning hidden" role="alert"></div>
-    <p class="setup-note">readin' only works in Chrome or Edge and keeps everything on your computer.</p>
+    <p class="setup-note" data-i18n="setup.footerNote">readin' only works in Chrome or Edge and keeps everything on your computer.</p>
   </div>
 </div>
 
@@ -28,51 +28,55 @@
     </a>
     <div class="header-right">
       <nav class="header-nav">
-        <a href="index.html" class="nav-link">Library</a>
-        <a href="streak.html" class="nav-link">Stats</a>
-        <a href="settings.html" class="nav-link is-active">Settings</a>
+        <a href="index.html" class="nav-link" data-i18n="nav.library">Library</a>
+        <a href="streak.html" class="nav-link" data-i18n="nav.stats">Stats</a>
+        <a href="settings.html" class="nav-link is-active" data-i18n="nav.settings">Settings</a>
       </nav>
-      <a href="read.html" class="btn-read">Read</a>
+      <a href="read.html" class="btn-read" data-i18n="nav.read">Read</a>
     </div>
   </header>
 
   <main class="page-shell">
     <div class="page-title-row">
       <div>
-        <h1 class="page-title">Settings</h1>
-        <p class="page-subtitle">Manage the categories your books can be tagged with.</p>
+        <h1 class="page-title" data-i18n="settings.pageTitle">Settings</h1>
+        <p class="page-subtitle" data-i18n="settings.pageSubtitle">Manage the categories your books can be tagged with.</p>
       </div>
     </div>
 
     <section class="settings-section">
-      <h2 class="section-title">Add a category</h2>
+      <h2 class="section-title" data-i18n="settings.addCategoryTitle">Add a category</h2>
       <form class="add-category-form" id="add-category-form" novalidate>
-        <input type="text" id="new-category-name" maxlength="60" placeholder="Category name" required />
+        <input type="text" id="new-category-name" maxlength="60" placeholder="Category name" data-i18n-placeholder="settings.categoryNamePlaceholder" required />
         <select id="new-category-group">
-          <option value="Custom">Custom</option>
-          <option value="Non-Fiction">Non-Fiction</option>
-          <option value="Fiction">Fiction</option>
+          <option value="Custom" data-i18n="categoryGroup.Custom">Custom</option>
+          <option value="Non-Fiction" data-i18n="categoryGroup.Non-Fiction">Non-Fiction</option>
+          <option value="Fiction" data-i18n="categoryGroup.Fiction">Fiction</option>
         </select>
-        <button type="submit" class="btn btn-primary">Add</button>
+        <button type="submit" class="btn btn-primary" data-i18n="settings.addBtn">Add</button>
       </form>
       <p class="error-text" id="category-form-error"></p>
     </section>
 
     <section class="settings-section">
-      <h2 class="section-title">Your categories</h2>
+      <h2 class="section-title" data-i18n="settings.yourCategoriesTitle">Your categories</h2>
       <div id="category-groups"></div>
     </section>
 
     <section class="settings-section">
-      <h2 class="section-title">Data</h2>
-      <p class="hint" style="margin-bottom: 12px;">Export your library as a CSV file, one row per book.</p>
-      <button type="button" class="btn btn-secondary" id="export-csv-btn">Export library as CSV</button>
+      <h2 class="section-title" data-i18n="settings.dataSectionTitle">Data</h2>
+      <p class="hint" style="margin-bottom: 12px;" data-i18n="settings.exportHint">Export your library as a CSV file, one row per book.</p>
+      <button type="button" class="btn btn-secondary" id="export-csv-btn" data-i18n="settings.exportBtn">Export library as CSV</button>
     </section>
   </main>
 </div>
 
 <div id="toast-container" class="toast-container"></div>
 
+<script src="js/i18n.js"></script>
+<script src="js/i18n-en.js"></script>
+<script src="js/i18n-pt.js"></script>
+<script src="js/i18n-fr.js"></script>
 <script src="js/fs.js"></script>
 <script src="js/store.js"></script>
 <script src="js/boot.js"></script>
