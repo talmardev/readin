@@ -12,12 +12,12 @@
 <div id="setup-screen" class="setup-screen">
   <div class="setup-card">
     <img src="readin_logo.svg" class="setup-icon" alt="" />
-    <h1 id="setup-title">Loading readin'…</h1>
-    <p id="setup-text">One moment.</p>
+    <h1 id="setup-title" data-i18n="setup.loading">Loading readin'…</h1>
+    <p id="setup-text" data-i18n="setup.oneMoment">One moment.</p>
     <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
     <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
     <div id="setup-error" class="setup-warning hidden" role="alert"></div>
-    <p class="setup-note">readin' only works in Chrome or Edge and keeps everything on your computer.</p>
+    <p class="setup-note" data-i18n="setup.footerNote">readin' only works in Chrome or Edge and keeps everything on your computer.</p>
   </div>
 </div>
 
@@ -28,23 +28,23 @@
     </a>
     <div class="header-right">
       <nav class="header-nav">
-        <a href="index.html" class="nav-link is-active">Library</a>
-        <a href="streak.html" class="nav-link">Stats</a>
-        <a href="settings.html" class="nav-link">Settings</a>
+        <a href="index.html" class="nav-link is-active" data-i18n="nav.library">Library</a>
+        <a href="streak.html" class="nav-link" data-i18n="nav.stats">Stats</a>
+        <a href="settings.html" class="nav-link" data-i18n="nav.settings">Settings</a>
       </nav>
-      <a href="read.html" class="btn-read">Read</a>
+      <a href="read.html" class="btn-read" data-i18n="nav.read">Read</a>
     </div>
   </header>
 
   <main class="page-shell">
     <div class="page-title-row">
       <div>
-        <h1 class="page-title">Your shelf</h1>
+        <h1 class="page-title" data-i18n="library.pageTitle">Your shelf</h1>
         <p class="page-subtitle" id="shelf-subtitle"></p>
       </div>
       <div class="shelf-search">
-        <input type="text" id="shelf-search-input" placeholder="Search title or author…" aria-label="Search your shelf" />
-        <button type="button" id="shelf-search-clear" class="shelf-search-clear hidden" aria-label="Clear search">&times;</button>
+        <input type="text" id="shelf-search-input" placeholder="Search title or author…" data-i18n-placeholder="library.searchPlaceholder" aria-label="Search your shelf" data-i18n-aria-label="library.searchAria" />
+        <button type="button" id="shelf-search-clear" class="shelf-search-clear hidden" aria-label="Clear search" data-i18n-aria-label="library.clearSearchAria">&times;</button>
       </div>
     </div>
 
@@ -56,7 +56,7 @@
           <span class="plus-icon">+</span>
         </div>
         <div class="book-meta">
-          <p class="book-title">Add book</p>
+          <p class="book-title" data-i18n="library.addBook">Add book</p>
         </div>
       </button>
     </div>
@@ -66,65 +66,65 @@
 <div id="book-modal-overlay" class="modal-overlay hidden">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="book-modal-title">
     <div class="modal-header">
-      <h2 class="modal-title" id="book-modal-title">Add book</h2>
-      <button type="button" class="modal-close" id="book-modal-close" aria-label="Close">&times;</button>
+      <h2 class="modal-title" id="book-modal-title" data-i18n="library.modalTitleAdd">Add book</h2>
+      <button type="button" class="modal-close" id="book-modal-close" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
     </div>
 
     <form id="book-form" novalidate>
       <div class="cover-upload">
-        <div class="cover-drop" id="cover-drop" role="button" tabindex="0" aria-label="Choose a cover image">
-          <span id="cover-drop-placeholder">No cover</span>
+        <div class="cover-drop" id="cover-drop" role="button" tabindex="0" aria-label="Choose a cover image" data-i18n-aria-label="library.chooseCoverAria">
+          <span id="cover-drop-placeholder" data-i18n="library.noCover">No cover</span>
           <img id="cover-preview" class="hidden" alt="" />
         </div>
         <div class="cover-upload-text">
-          Upload a cover image (optional).
+          <span data-i18n="library.coverHint">Upload a cover image (optional).</span>
           <br />
-          <button type="button" id="cover-remove-btn" class="hidden">Remove cover</button>
+          <button type="button" id="cover-remove-btn" class="hidden" data-i18n="library.removeCover">Remove cover</button>
         </div>
         <input type="file" id="cover-input" accept="image/*" class="hidden" />
       </div>
 
       <div class="field">
-        <label for="book-title-input">Title</label>
+        <label for="book-title-input" data-i18n="library.fieldTitle">Title</label>
         <input type="text" id="book-title-input" required maxlength="200" placeholder="The Left Hand of Darkness" />
       </div>
       <div class="field">
-        <label for="book-author-input">Author</label>
+        <label for="book-author-input" data-i18n="library.fieldAuthor">Author</label>
         <input type="text" id="book-author-input" maxlength="200" placeholder="Ursula K. Le Guin" />
       </div>
       <div class="field">
-        <label for="book-pages-input">Total pages</label>
+        <label for="book-pages-input" data-i18n="library.fieldTotalPages">Total pages</label>
         <input type="number" id="book-pages-input" min="1" step="1" required placeholder="304" />
       </div>
       <div class="field">
-        <label for="book-isbn-input">ISBN (optional)</label>
+        <label for="book-isbn-input" data-i18n="library.fieldIsbn">ISBN (optional)</label>
         <input type="text" id="book-isbn-input" maxlength="32" placeholder="978-3-16-148410-0" />
       </div>
       <div class="field">
-        <label>Ownership</label>
+        <label data-i18n="library.fieldOwnership">Ownership</label>
         <div class="ownership-toggle" id="ownership-toggle">
-          <button type="button" class="ownership-option" data-ownership="owned">Owned</button>
-          <button type="button" class="ownership-option" data-ownership="library">Library</button>
+          <button type="button" class="ownership-option" data-ownership="owned" data-i18n="library.ownedOption">Owned</button>
+          <button type="button" class="ownership-option" data-ownership="library" data-i18n="library.libraryOption">Library</button>
         </div>
-        <p class="hint">Mark it Library so you remember it isn't on your shelf anymore.</p>
+        <p class="hint" data-i18n="library.ownershipHint">Mark it Library so you remember it isn't on your shelf anymore.</p>
       </div>
       <div class="field">
-        <label>Categories</label>
+        <label data-i18n="library.fieldCategories">Categories</label>
         <div class="category-checklist" id="book-category-checklist"></div>
       </div>
       <div class="field rating-field hidden" id="book-rating-field">
-        <label>Your rating</label>
+        <label data-i18n="library.fieldYourRating">Your rating</label>
         <div class="star-picker" id="book-rating-picker"></div>
       </div>
       <p class="error-text" id="book-form-error"></p>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" id="book-modal-cancel">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="book-modal-submit">Add book</button>
+        <button type="button" class="btn btn-secondary" id="book-modal-cancel" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="book-modal-submit" data-i18n="library.submitAdd">Add book</button>
       </div>
     </form>
 
     <div class="modal-footer-row hidden" id="book-modal-delete-row">
-      <button type="button" class="btn btn-danger" id="book-delete-btn">Delete book</button>
+      <button type="button" class="btn btn-danger" id="book-delete-btn" data-i18n="library.deleteBook">Delete book</button>
     </div>
   </div>
 </div>
@@ -132,45 +132,45 @@
 <div id="log-modal-overlay" class="modal-overlay hidden">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="log-modal-title">
     <div class="modal-header">
-      <h2 class="modal-title" id="log-modal-title">Log reading</h2>
-      <button type="button" class="modal-close" id="log-modal-close" aria-label="Close">&times;</button>
+      <h2 class="modal-title" id="log-modal-title" data-i18n="library.logModalTitle">Log reading</h2>
+      <button type="button" class="modal-close" id="log-modal-close" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
     </div>
 
     <div class="log-modal-book" id="log-modal-book"></div>
 
-    <p class="finished-note hidden" id="log-finished-note">
+    <p class="finished-note hidden" id="log-finished-note" data-i18n="library.finishedNote">
       This book is finished, so logging is closed unless you delete a log below.
     </p>
 
     <form id="log-form" novalidate>
       <div class="field">
-        <label for="log-pages-input">Pages read</label>
+        <label for="log-pages-input" data-i18n="library.fieldPagesRead">Pages read</label>
         <input type="number" id="log-pages-input" min="1" step="1" required placeholder="25" />
-        <p class="hint" id="log-pages-hint">Pages read since your last log, not your current page.</p>
+        <p class="hint" id="log-pages-hint" data-i18n="library.pagesReadHint">Pages read since your last log, not your current page.</p>
       </div>
       <div class="field">
-        <label for="log-stopped-input">Stopped at page</label>
+        <label for="log-stopped-input" data-i18n="library.fieldStoppedAtPage">Stopped at page</label>
         <input type="number" id="log-stopped-input" min="1" step="1" placeholder="105" />
       </div>
       <div class="field" id="log-date-field">
-        <label for="log-date-input">Date</label>
+        <label for="log-date-input" data-i18n="library.fieldDate">Date</label>
         <input type="date" id="log-date-input" />
       </div>
       <div class="field">
         <label class="checkbox-row" for="log-past-checkbox">
           <input type="checkbox" id="log-past-checkbox" />
-          <span class="checkbox-label">Past read (no exact date)</span>
+          <span class="checkbox-label" data-i18n="library.pastReadCheckbox">Past read (no exact date)</span>
         </label>
       </div>
       <p class="error-text" id="log-form-error"></p>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" id="log-modal-cancel">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save log</button>
+        <button type="button" class="btn btn-secondary" id="log-modal-cancel" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" data-i18n="library.saveLog">Save log</button>
       </div>
     </form>
 
     <div class="recent-logs" id="recent-logs-section">
-      <h3>Recent logs</h3>
+      <h3 data-i18n="library.recentLogs">Recent logs</h3>
       <div id="recent-logs-list"></div>
     </div>
   </div>
@@ -179,20 +179,49 @@
 <div id="rate-modal-overlay" class="modal-overlay hidden">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rate-modal-title">
     <div class="modal-header">
-      <h2 class="modal-title" id="rate-modal-title">You finished it!</h2>
-      <button type="button" class="modal-close" id="rate-modal-close" aria-label="Close">&times;</button>
+      <h2 class="modal-title" id="rate-modal-title" data-i18n="library.rateModalTitle">You finished it!</h2>
+      <button type="button" class="modal-close" id="rate-modal-close" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
     </div>
     <div class="log-modal-book" id="rate-modal-book"></div>
-    <p class="hint" style="margin-bottom: 14px;">How would you rate it?</p>
+    <p class="hint" style="margin-bottom: 14px;" data-i18n="library.rateModalQuestion">How would you rate it?</p>
     <div class="star-picker" id="rate-modal-picker"></div>
     <div class="modal-actions">
-      <button type="button" class="btn btn-secondary" id="rate-modal-skip">Maybe later</button>
+      <button type="button" class="btn btn-secondary" id="rate-modal-skip" data-i18n="library.rateModalSkip">Maybe later</button>
     </div>
+  </div>
+</div>
+
+<div class="wishlist-widget hidden" id="wishlist-widget">
+  <button type="button" class="wishlist-toggle" id="wishlist-toggle" aria-expanded="false" aria-controls="wishlist-panel">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    <span data-i18n="wishlist.title">Wishlist</span>
+    <span class="wishlist-count hidden" id="wishlist-count">0</span>
+  </button>
+
+  <div class="wishlist-panel hidden" id="wishlist-panel">
+    <div class="wishlist-panel-header">
+      <h2 data-i18n="wishlist.title">Wishlist</h2>
+      <button type="button" class="modal-close" id="wishlist-panel-close" aria-label="Close wishlist" data-i18n-aria-label="wishlist.closeAria">&times;</button>
+    </div>
+
+    <form id="wishlist-form" novalidate>
+      <input type="text" id="wishlist-title-input" class="wishlist-input" maxlength="200" required placeholder="Title" data-i18n-placeholder="wishlist.titlePlaceholder" aria-label="Title" data-i18n-aria-label="wishlist.titleAria" />
+      <input type="text" id="wishlist-author-input" class="wishlist-input" maxlength="200" placeholder="Author (optional)" data-i18n-placeholder="wishlist.authorPlaceholder" aria-label="Author" data-i18n-aria-label="wishlist.authorAria" />
+      <input type="url" id="wishlist-link-input" class="wishlist-input" maxlength="500" placeholder="Link (optional)" data-i18n-placeholder="wishlist.linkPlaceholder" aria-label="Link" data-i18n-aria-label="wishlist.linkAria" />
+      <p class="error-text" id="wishlist-form-error"></p>
+      <button type="submit" class="btn btn-primary btn-block" data-i18n="wishlist.addBtn">Add to wishlist</button>
+    </form>
+
+    <div class="wishlist-list" id="wishlist-list"></div>
   </div>
 </div>
 
 <div id="toast-container" class="toast-container"></div>
 
+<script src="js/i18n.js"></script>
+<script src="js/i18n-en.js"></script>
+<script src="js/i18n-pt.js"></script>
+<script src="js/i18n-fr.js"></script>
 <script src="js/fs.js"></script>
 <script src="js/store.js"></script>
 <script src="js/boot.js"></script>

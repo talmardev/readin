@@ -1,6 +1,6 @@
 window.RI = window.RI || {};
 
-// classic script, not a module — file:// blocks ES module fetches via CORS
+// classic script, not a module: file:// blocks ES module fetches via CORS
 
 RI.fs = (function () {
   "use strict";
@@ -13,6 +13,7 @@ RI.fs = (function () {
   const READS_FILE = "reads.json";
   const LOGS_FILE = "logs.json";
   const RATINGS_FILE = "ratings.json";
+  const WISHLIST_FILE = "wishlist.json";
 
   function isSupported() {
     return typeof window.showDirectoryPicker === "function";
@@ -91,7 +92,7 @@ RI.fs = (function () {
   // inside it and ignoring the data that was already there.
   async function looksLikeDataDir(handle) {
     if (handle.name && handle.name.toLowerCase() === "data") return true;
-    const markers = [LIBRARY_FILE, LOGS_FILE, READS_FILE, RATINGS_FILE];
+    const markers = [LIBRARY_FILE, LOGS_FILE, READS_FILE, RATINGS_FILE, WISHLIST_FILE];
     for (const name of markers) {
       try {
         await handle.getFileHandle(name, { create: false });
@@ -113,7 +114,7 @@ RI.fs = (function () {
     return { dataHandle, coversHandle };
   }
 
-  // library.json only holds books + categories now — logs live in logs.json
+  // library.json only holds books + categories now; logs live in logs.json
   // (see readLibraryAndLogs, which also migrates any pre-existing embedded logs)
   async function writeLibrary(dataHandle, library) {
     const fileHandle = await dataHandle.getFileHandle(LIBRARY_FILE, { create: true });
@@ -123,7 +124,7 @@ RI.fs = (function () {
     await writable.close();
   }
 
-  // logs.json — { logs: [...] }, split out of library.json so books/categories
+  // logs.json: { logs: [...] }, split out of library.json so books/categories
   // stay small and logs (the fastest-growing data) live on their own
   async function readLogs(dataHandle) {
     let fileHandle;
@@ -199,7 +200,7 @@ RI.fs = (function () {
     return { library: { books, categories }, logs: existingLogs };
   }
 
-  // reads.json — one row per timed Read-page session, separate from library.json
+  // reads.json: one row per timed Read-page session, separate from library.json
   async function readReads(dataHandle) {
     let fileHandle;
     try {
@@ -222,7 +223,7 @@ RI.fs = (function () {
     await writable.close();
   }
 
-  // ratings.json — { ratings: [...] }, one row per book that has ever hit
+  // ratings.json: { ratings: [...] }, one row per book that has ever hit
   // 100%. stars is null until the user actually rates it; the row still
   // exists so lastNudgedDate (the once-a-day nudge-popup throttle) has
   // somewhere to live even before a rating is given.
@@ -248,8 +249,32 @@ RI.fs = (function () {
     await writable.close();
   }
 
+  // wishlist.json: { items: [...] }, books not yet owned/tracked. Separate
+  // file so it's untouched by anything that reads/writes library.json.
+  async function readWishlist(dataHandle) {
+    let fileHandle;
+    try {
+      fileHandle = await dataHandle.getFileHandle(WISHLIST_FILE, { create: false });
+    } catch (err) {
+      if (err && err.name === "NotFoundError") return { items: [] };
+      throw err;
+    }
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    if (!text.trim()) return { items: [] };
+    const parsed = JSON.parse(text);
+    return { items: Array.isArray(parsed.items) ? parsed.items : [] };
+  }
+
+  async function writeWishlist(dataHandle, wishlistData) {
+    const fileHandle = await dataHandle.getFileHandle(WISHLIST_FILE, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify({ items: wishlistData.items }, null, 2));
+    await writable.close();
+  }
+
   // one-off exports go through the native Save As dialog rather than the
-  // app's own data/ folder handle — this is the user picking a destination
+  // app's own data/ folder handle; this is the user picking a destination
   // outside readin's own storage, not a readin-managed file
   async function saveCsvAs(suggestedName, csvText) {
     const handle = await window.showSaveFilePicker({
@@ -325,6 +350,8 @@ RI.fs = (function () {
     writeReads,
     readRatings,
     writeRatings,
+    readWishlist,
+    writeWishlist,
     saveCsvAs,
     saveCover,
     deleteCover,

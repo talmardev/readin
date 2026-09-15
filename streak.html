@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>readin' — Stats</title>
+<title>readin' - Stats</title>
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -12,12 +12,12 @@
 <div id="setup-screen" class="setup-screen">
   <div class="setup-card">
     <img src="readin_logo.svg" class="setup-icon" alt="" />
-    <h1 id="setup-title">Loading readin'…</h1>
-    <p id="setup-text">One moment.</p>
+    <h1 id="setup-title" data-i18n="setup.loading">Loading readin'…</h1>
+    <p id="setup-text" data-i18n="setup.oneMoment">One moment.</p>
     <button type="button" id="setup-action-btn" class="btn btn-primary hidden"></button>
     <button type="button" id="setup-alt-btn" class="btn btn-text btn-block hidden"></button>
     <div id="setup-error" class="setup-warning hidden" role="alert"></div>
-    <p class="setup-note">readin' only works in Chrome or Edge and keeps everything on your computer.</p>
+    <p class="setup-note" data-i18n="setup.footerNote">readin' only works in Chrome or Edge and keeps everything on your computer.</p>
   </div>
 </div>
 
@@ -28,68 +28,68 @@
     </a>
     <div class="header-right">
       <nav class="header-nav">
-        <a href="index.html" class="nav-link">Library</a>
-        <a href="streak.html" class="nav-link is-active">Stats</a>
-        <a href="settings.html" class="nav-link">Settings</a>
+        <a href="index.html" class="nav-link" data-i18n="nav.library">Library</a>
+        <a href="streak.html" class="nav-link is-active" data-i18n="nav.stats">Stats</a>
+        <a href="settings.html" class="nav-link" data-i18n="nav.settings">Settings</a>
       </nav>
-      <a href="read.html" class="btn-read">Read</a>
+      <a href="read.html" class="btn-read" data-i18n="nav.read">Read</a>
     </div>
   </header>
 
   <main class="page-shell">
     <div class="page-title-row">
       <div>
-        <h1 class="page-title">Your stats</h1>
-        <p class="page-subtitle">Every day you logged a page, mapped out like a shelf of receipts.</p>
+        <h1 class="page-title" data-i18n="streak.pageTitle">Your stats</h1>
+        <p class="page-subtitle" data-i18n="streak.pageSubtitle">Every day you logged a page, mapped out like a shelf of receipts.</p>
       </div>
     </div>
 
     <section class="stat-row">
       <div class="stat-block">
         <p class="stat-sentence">
-          Reading for <span class="stat-num" id="streak-days-num">0</span>
-          <span id="streak-days-word">days</span><span class="stat-today-dot hidden" id="streak-today-dot" title="You read today"></span>
+          <span data-i18n="streak.readingForPrefix">Reading for </span><span class="stat-num" id="streak-days-num">0</span>
+          <span id="streak-days-word">days</span><span class="stat-today-dot hidden" id="streak-today-dot" title="You read today" data-i18n-title="streak.youReadTodayTitle"></span>
         </p>
-        <p class="stat-caption">Current streak</p>
+        <p class="stat-caption" data-i18n="streak.currentStreakCaption">Current streak</p>
       </div>
       <div class="stat-block">
-        <p class="stat-sentence">Longest streak: <span class="stat-num" id="longest-streak-num">0</span></p>
-        <p class="stat-caption">All-time best</p>
+        <p class="stat-sentence"><span data-i18n="streak.longestStreakPrefix">Longest streak: </span><span class="stat-num" id="longest-streak-num">0</span></p>
+        <p class="stat-caption" data-i18n="streak.allTimeBestCaption">All-time best</p>
       </div>
     </section>
 
     <section class="mini-stat-row">
       <div class="mini-stat-tile">
         <p class="mini-stat-num" id="mini-total-pages">0</p>
-        <p class="mini-stat-caption">Pages read</p>
+        <p class="mini-stat-caption" data-i18n="streak.miniPagesRead">Pages read</p>
       </div>
       <div class="mini-stat-tile">
         <p class="mini-stat-num" id="mini-books-read">0</p>
-        <p class="mini-stat-caption">Books read</p>
+        <p class="mini-stat-caption" data-i18n="streak.miniBooksRead">Books read</p>
       </div>
       <div class="mini-stat-tile">
-        <p class="mini-stat-num" id="mini-avg-days">—</p>
-        <p class="mini-stat-caption">Avg. days to finish</p>
+        <p class="mini-stat-num" id="mini-avg-days">-</p>
+        <p class="mini-stat-caption" data-i18n="streak.miniAvgDays">Avg. days to finish</p>
       </div>
       <div class="mini-stat-tile">
-        <p class="mini-stat-num" id="mini-avg-pages-day">—</p>
-        <p class="mini-stat-caption">Avg. pages/day</p>
+        <p class="mini-stat-num" id="mini-avg-pages-day">-</p>
+        <p class="mini-stat-caption" data-i18n="streak.miniAvgPagesDay">Avg. pages/day</p>
       </div>
     </section>
 
     <section class="heatmap-section">
-      <h2 class="section-title">Reading map</h2>
+      <h2 class="section-title" data-i18n="streak.readingMap">Reading map</h2>
       <div class="heatmap-scroll">
         <div class="heatmap-inner">
           <div class="heatmap-months" id="heatmap-months"></div>
           <div class="heatmap-body">
             <div class="heatmap-weekday-labels">
               <span></span>
-              <span>Mon</span>
+              <span data-i18n="streak.weekdayMon">Mon</span>
               <span></span>
-              <span>Wed</span>
+              <span data-i18n="streak.weekdayWed">Wed</span>
               <span></span>
-              <span>Fri</span>
+              <span data-i18n="streak.weekdayFri">Fri</span>
               <span></span>
             </div>
             <div class="heatmap-grid" id="heatmap-grid"></div>
@@ -97,26 +97,30 @@
         </div>
       </div>
       <div class="heatmap-legend">
-        <span>Less</span>
+        <span data-i18n="streak.legendLess">Less</span>
         <span class="heatmap-cell"></span>
         <span class="heatmap-cell lvl-1"></span>
         <span class="heatmap-cell lvl-2"></span>
         <span class="heatmap-cell lvl-3"></span>
         <span class="heatmap-cell lvl-4"></span>
-        <span>More</span>
+        <span data-i18n="streak.legendMore">More</span>
       </div>
     </section>
 
     <section>
-      <h2 class="section-title">Log</h2>
+      <h2 class="section-title" data-i18n="streak.logSectionTitle">Log</h2>
       <div class="log-list" id="log-list"></div>
-      <p class="empty-note hidden" id="log-list-empty">Log a few pages from your shelf to get started.</p>
+      <p class="empty-note hidden" id="log-list-empty" data-i18n="streak.logEmptyNote">Log a few pages from your shelf to get started.</p>
     </section>
   </main>
 </div>
 
 <div id="toast-container" class="toast-container"></div>
 
+<script src="js/i18n.js"></script>
+<script src="js/i18n-en.js"></script>
+<script src="js/i18n-pt.js"></script>
+<script src="js/i18n-fr.js"></script>
 <script src="js/fs.js"></script>
 <script src="js/store.js"></script>
 <script src="js/boot.js"></script>

@@ -3,11 +3,18 @@
 
   const store = RI.store;
   const fs = RI.fs;
+  const t = RI.i18n.t;
 
   const PENCIL_SVG =
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   const TRASH_SVG =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+  const BOOKMARK_SVG =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+  const LINK_SVG =
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>';
+  const MOVE_SVG =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8l4 4-4 4"/><path d="M8 12h8"/></svg>';
 
   let ctx = null;
   let gridCoverUrls = new Map();
@@ -22,7 +29,7 @@
 
   let logModalBookId = null;
   let logModalCoverUrl = null;
-  // pages already logged for the book in the open log modal — the offset that
+  // pages already logged for the book in the open log modal: the offset that
   // converts between "pages read this session" and "stopped at page"
   let logModalPagesAlready = 0;
   // which of the two log inputs the user last typed into, so an error can be
@@ -86,12 +93,29 @@
   let rateModalCoverUrl = null;
   let activeNudges = new Map(); // bookId -> { el, timer }
 
+  const wishlistWidget = document.getElementById("wishlist-widget");
+  const wishlistToggle = document.getElementById("wishlist-toggle");
+  const wishlistCount = document.getElementById("wishlist-count");
+  const wishlistPanel = document.getElementById("wishlist-panel");
+  const wishlistPanelClose = document.getElementById("wishlist-panel-close");
+  const wishlistForm = document.getElementById("wishlist-form");
+  const wishlistTitleInput = document.getElementById("wishlist-title-input");
+  const wishlistAuthorInput = document.getElementById("wishlist-author-input");
+  const wishlistLinkInput = document.getElementById("wishlist-link-input");
+  const wishlistFormError = document.getElementById("wishlist-form-error");
+  const wishlistList = document.getElementById("wishlist-list");
+
+  // set while the "move to library" flow has the Add Book modal open for a
+  // wishlist entry: removed from the wishlist on successful submit, left
+  // alone on cancel (see closeBookModal)
+  let convertingWishlistItemId = null;
+
   async function persist() {
     try {
       await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
     } catch (err) {
       console.error(err);
-      RI.toast("Could not save: " + (err && err.message ? err.message : "unknown error"), "error");
+      RI.toast(t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
     }
   }
 
@@ -100,14 +124,23 @@
       await fs.writeRatings(ctx.dataHandle, ctx.ratingsData);
     } catch (err) {
       console.error(err);
-      RI.toast("Could not save rating: " + (err && err.message ? err.message : "unknown error"), "error");
+      RI.toast(t("common.couldNotSaveRatingPrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
+    }
+  }
+
+  async function persistWishlist() {
+    try {
+      await fs.writeWishlist(ctx.dataHandle, ctx.wishlistData);
+    } catch (err) {
+      console.error(err);
+      RI.toast(t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
     }
   }
 
   function formatDateDisplay(isoDate) {
-    if (!isoDate) return "—";
+    if (!isoDate) return t("common.dash");
     const d = store.parseISODate(isoDate);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(RI.i18n.getLocale(), { month: "short", day: "numeric", year: "numeric" });
   }
 
   async function resolveCoverUrl(book) {
@@ -132,7 +165,7 @@
     const allChip = document.createElement("button");
     allChip.type = "button";
     allChip.className = "filter-chip" + (selectedCategoryFilter === null ? " is-active" : "");
-    allChip.textContent = "All";
+    allChip.textContent = t("library.filterAll");
     allChip.addEventListener("click", () => {
       selectedCategoryFilter = null;
       renderGrid();
@@ -143,7 +176,7 @@
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "filter-chip" + (selectedCategoryFilter === category.id ? " is-active" : "");
-      chip.textContent = category.name;
+      chip.textContent = RI.i18n.categoryName(category);
       chip.addEventListener("click", () => {
         selectedCategoryFilter = selectedCategoryFilter === category.id ? null : category.id;
         renderGrid();
@@ -192,17 +225,17 @@
       const empty = document.createElement("p");
       empty.className = "empty-state";
       if (searchQuery) {
-        empty.textContent = `No books match "${shelfSearchInput.value.trim()}".`;
+        empty.textContent = t("library.emptySearch", { query: shelfSearchInput.value.trim() });
       } else if (selectedCategoryFilter) {
-        empty.textContent = "No books tagged with this category yet.";
+        empty.textContent = t("library.emptyCategory");
       } else {
-        empty.textContent = "Your shelf is empty. Add your first book to start tracking.";
+        empty.textContent = t("library.emptyShelf");
       }
       grid.appendChild(empty);
     }
 
     shelfSubtitle.textContent = allBooks.length
-      ? `${allBooks.length} book${allBooks.length === 1 ? "" : "s"} on your shelf`
+      ? t("library.subtitleCount", { count: allBooks.length, n: allBooks.length })
       : "";
 
     for (const book of books) {
@@ -228,7 +261,7 @@
   }
 
   // one non-interactive two-layer star glyph (muted background + green
-  // foreground, foreground clipped to a 0/50/100% width) — used for the
+  // foreground, foreground clipped to a 0/50/100% width), used for the
   // read-only card display
   function buildStarGlyph() {
     const cell = document.createElement("span");
@@ -256,8 +289,8 @@
   }
 
   // one interactive star position: a visual glyph (bg + fg, same as
-  // buildStarGlyph) plus two invisible half-width buttons stacked on top —
-  // clicking is a real DOM element hit (dedicated "set to X.5" / "set to X"
+  // buildStarGlyph) plus two invisible half-width buttons stacked on top.
+  // Clicking is a real DOM element hit (dedicated "set to X.5" / "set to X"
   // buttons), not pixel-position math against getBoundingClientRect, so it's
   // reliable regardless of zoom/DPI/click precision. This also makes every
   // half-star reachable by keyboard/Tab, unlike a single click-split button.
@@ -277,7 +310,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "star-half " + (half === 0 ? "star-half-lo" : "star-half-hi");
-      btn.setAttribute("aria-label", `${value} star${value === 1 ? "" : "s"}`);
+      btn.setAttribute("aria-label", t("common.starsAria", { count: value, value }));
       btn.addEventListener("mouseenter", () => onPreview(value));
       btn.addEventListener("focus", () => onPreview(value));
       btn.addEventListener("click", () => onPick(value));
@@ -289,7 +322,7 @@
 
   // interactive 1-5 star picker in 0.5 increments. Populates `container`
   // (an existing .star-picker element) and returns a controller so the same
-  // DOM/listeners can be reused across modal opens instead of rebuilding —
+  // DOM/listeners can be reused across modal opens instead of rebuilding.
   // setValue() resets the displayed rating, setOnPick() rebinds which book
   // a click should save to.
   function buildStarPicker(container) {
@@ -350,7 +383,7 @@
     bubble.className = "rating-nudge";
 
     const text = document.createElement("p");
-    text.textContent = "Liked it? Hated it? Rate it.";
+    text.textContent = t("library.nudgeText");
     bubble.appendChild(text);
 
     const pickerEl = document.createElement("div");
@@ -437,7 +470,7 @@
     const editBtn = document.createElement("button");
     editBtn.type = "button";
     editBtn.className = "edit-affordance";
-    editBtn.setAttribute("aria-label", `Edit ${book.title}`);
+    editBtn.setAttribute("aria-label", t("library.editAria", { title: book.title }));
     editBtn.innerHTML = PENCIL_SVG;
     editBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -448,14 +481,14 @@
     if (book.ownership === "library") {
       const badge = document.createElement("span");
       badge.className = "ownership-badge";
-      badge.textContent = "Library";
+      badge.textContent = t("library.libraryOption");
       coverWrap.appendChild(badge);
     }
 
     if (readToday) {
       const dot = document.createElement("span");
       dot.className = "read-today-dot";
-      dot.title = "You read this today";
+      dot.title = t("library.readTodayTitle");
       coverWrap.appendChild(dot);
     }
 
@@ -478,7 +511,7 @@
       bookCategories.slice(0, 2).forEach((c) => {
         const tag = document.createElement("span");
         tag.className = "category-tag";
-        tag.textContent = c.name;
+        tag.textContent = RI.i18n.categoryName(c);
         tagsEl.appendChild(tag);
       });
       if (bookCategories.length > 2) {
@@ -499,7 +532,7 @@
     const stats = document.createElement("div");
     stats.className = "progress-stats";
     const pagesSpan = document.createElement("span");
-    pagesSpan.textContent = `${progress.pagesRead} / ${progress.totalPages} pages`;
+    pagesSpan.textContent = t("library.pagesOfTotal", { read: progress.pagesRead, total: progress.totalPages });
     const percentSpan = document.createElement("span");
     percentSpan.className = "progress-percent";
     percentSpan.textContent = progress.percent + "%";
@@ -566,6 +599,7 @@
     if (isOverlayOpen(rateModalOverlay)) closeRateModal();
     else if (isOverlayOpen(logModalOverlay)) closeLogModal();
     else if (isOverlayOpen(bookModalOverlay)) closeBookModal();
+    else if (!wishlistPanel.classList.contains("hidden")) closeWishlistPanel();
   });
 
   bookModalOverlay.addEventListener("click", (e) => {
@@ -681,11 +715,11 @@
     bookCategoryChecklist.innerHTML = "";
 
     [["Non-Fiction", groups["Non-Fiction"]], ["Fiction", groups.Fiction], ["Custom", groups.Custom]].forEach(
-      ([label, categories]) => {
+      ([groupKey, categories]) => {
         if (categories.length === 0) return;
         const heading = document.createElement("div");
         heading.className = "category-group-label";
-        heading.textContent = label;
+        heading.textContent = RI.i18n.categoryGroupLabel(groupKey);
         bookCategoryChecklist.appendChild(heading);
 
         categories.forEach((category) => {
@@ -696,7 +730,7 @@
           checkbox.value = category.id;
           checkbox.checked = selected.has(category.id);
           const text = document.createElement("span");
-          text.textContent = category.name;
+          text.textContent = RI.i18n.categoryName(category);
           row.appendChild(checkbox);
           row.appendChild(text);
           bookCategoryChecklist.appendChild(row);
@@ -707,7 +741,7 @@
     if (!bookCategoryChecklist.hasChildNodes()) {
       const note = document.createElement("p");
       note.className = "no-categories-note";
-      note.textContent = "Add categories from Settings to get started.";
+      note.textContent = t("library.noCategoriesNote");
       bookCategoryChecklist.appendChild(note);
     }
   }
@@ -718,12 +752,12 @@
     );
   }
 
-  function openAddBookModal() {
+  function openAddBookModal(prefill) {
     editingBookId = null;
     pendingCoverFile = null;
     pendingCoverRemoved = false;
-    bookModalTitle.textContent = "Add book";
-    bookModalSubmit.textContent = "Add book";
+    bookModalTitle.textContent = t("library.modalTitleAdd");
+    bookModalSubmit.textContent = t("library.submitAdd");
     bookForm.reset();
     setCoverPreview(null);
     setOwnership(null);
@@ -732,7 +766,13 @@
     bookModalDeleteRow.classList.add("hidden");
     bookFormError.textContent = "";
     showOverlay(bookModalOverlay);
-    bookTitleInput.focus();
+    if (prefill) {
+      bookTitleInput.value = prefill.title || "";
+      bookAuthorInput.value = prefill.author || "";
+      bookPagesInput.focus();
+    } else {
+      bookTitleInput.focus();
+    }
   }
 
   async function openEditBookModal(bookId) {
@@ -741,8 +781,8 @@
     editingBookId = bookId;
     pendingCoverFile = null;
     pendingCoverRemoved = false;
-    bookModalTitle.textContent = "Edit book";
-    bookModalSubmit.textContent = "Save changes";
+    bookModalTitle.textContent = t("library.modalTitleEdit");
+    bookModalSubmit.textContent = t("library.submitEdit");
     bookTitleInput.value = book.title;
     bookAuthorInput.value = book.author || "";
     bookPagesInput.value = book.totalPages;
@@ -773,9 +813,10 @@
     pendingCoverRemoved = false;
     pendingOwnership = null;
     coverInput.value = "";
+    convertingWishlistItemId = null;
   }
 
-  addBookCard.addEventListener("click", openAddBookModal);
+  addBookCard.addEventListener("click", () => openAddBookModal());
   bookModalCancel.addEventListener("click", closeBookModal);
   bookModalClose.addEventListener("click", closeBookModal);
 
@@ -791,7 +832,7 @@
     const file = coverInput.files && coverInput.files[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      bookFormError.textContent = "Please choose an image file.";
+      bookFormError.textContent = t("library.errChooseImage");
       return;
     }
     bookFormError.textContent = "";
@@ -818,11 +859,11 @@
     const categoryIds = selectedCategoryIds();
 
     if (!title) {
-      bookFormError.textContent = "Title is required.";
+      bookFormError.textContent = t("library.errTitleRequired");
       return;
     }
     if (!totalPages || totalPages < 1) {
-      bookFormError.textContent = "Total pages must be at least 1.";
+      bookFormError.textContent = t("library.errTotalPagesMin");
       return;
     }
     bookFormError.textContent = "";
@@ -858,11 +899,16 @@
         }
       }
       await persist();
+      if (!editingBookId && convertingWishlistItemId) {
+        store.deleteWishlistItem(ctx.wishlistData, convertingWishlistItemId);
+        await persistWishlist();
+        renderWishlistPanel();
+      }
       closeBookModal();
       await renderGrid();
     } catch (err) {
       console.error(err);
-      bookFormError.textContent = "Could not save: " + (err && err.message ? err.message : "unknown error");
+      bookFormError.textContent = t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError"));
     } finally {
       bookModalSubmit.disabled = false;
     }
@@ -872,9 +918,7 @@
     if (!editingBookId) return;
     const book = store.getBookById(ctx.library, editingBookId);
     if (!book) return;
-    const ok = confirm(
-      `Delete "${book.title}"? This removes its cover and all its reading logs. This can't be undone.`
-    );
+    const ok = confirm(t("library.confirmDeleteBook", { title: book.title }));
     if (!ok) return;
     try {
       if (book.coverFile) await fs.deleteCover(ctx.coversHandle, book.coverFile);
@@ -884,7 +928,7 @@
       await renderGrid();
     } catch (err) {
       console.error(err);
-      bookFormError.textContent = "Could not delete: " + (err && err.message ? err.message : "unknown error");
+      bookFormError.textContent = t("library.errCouldNotDeletePrefix") + (err && err.message ? err.message : t("common.unknownError"));
     }
   });
 
@@ -917,7 +961,7 @@
     title.textContent = book.title;
     const sub = document.createElement("p");
     sub.className = "sub";
-    sub.textContent = `${progress.pagesRead} / ${progress.totalPages} pages · ${progress.percent}%`;
+    sub.textContent = `${t("library.pagesOfTotal", { read: progress.pagesRead, total: progress.totalPages })} · ${progress.percent}%`;
     info.appendChild(title);
     info.appendChild(sub);
     logModalBookEl.appendChild(info);
@@ -934,7 +978,7 @@
     if (logs.length === 0) {
       const note = document.createElement("p");
       note.className = "no-logs-note";
-      note.textContent = "No logs yet for this book.";
+      note.textContent = t("library.noLogsYet");
       recentLogsList.appendChild(note);
       return;
     }
@@ -945,19 +989,19 @@
 
       const amount = document.createElement("span");
       amount.className = "amount";
-      amount.textContent = `${log.pagesRead} pages`;
+      amount.textContent = t("library.logAmountPages", { count: log.pagesRead, n: log.pagesRead });
 
       const date = document.createElement("span");
       date.className = "date";
-      date.textContent = log.isPastRead ? "Past read" : formatDateDisplay(log.date);
+      date.textContent = log.isPastRead ? t("library.pastReadLabel") : formatDateDisplay(log.date);
 
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.className = "remove-log";
-      removeBtn.setAttribute("aria-label", "Delete this log");
+      removeBtn.setAttribute("aria-label", t("library.deleteLogAria"));
       removeBtn.innerHTML = TRASH_SVG;
       removeBtn.addEventListener("click", async () => {
-        const ok = confirm("Delete this log entry?");
+        const ok = confirm(t("library.confirmDeleteLog"));
         if (!ok) return;
         store.deleteLog(ctx.library, log.id);
         await persist();
@@ -987,7 +1031,7 @@
     logForm.classList.toggle("hidden", finished);
     if (!finished) {
       logPagesInput.max = remaining;
-      logPagesHint.textContent = `Pages read since your last log, not your current page. ${remaining} page${remaining === 1 ? "" : "s"} left.`;
+      logPagesHint.textContent = t("library.pagesReadHintWithRemaining", { count: remaining, n: remaining });
       // "stopped at page" is the same log expressed as an absolute page: it can
       // land anywhere past what's already been read, up to the last page
       logStoppedInput.min = progress.pagesRead + 1;
@@ -1072,24 +1116,24 @@
     const pages = Number(logPagesInput.value);
     if (!pages || pages < 1) {
       logFormError.textContent = logLastEditedStopped
-        ? "The page you stopped on must be past where you already are."
-        : "Enter at least 1 page.";
+        ? t("library.errStoppedMustBePast")
+        : t("library.errEnterAtLeast1Page");
       return;
     }
     const bookBefore = store.getBookById(ctx.library, logModalBookId);
     const remaining = bookBefore ? store.remainingPages(ctx.library, bookBefore) : 0;
     if (remaining <= 0) {
-      logFormError.textContent = "This book is already finished.";
+      logFormError.textContent = t("library.errAlreadyFinished");
       return;
     }
     if (pages > remaining) {
-      logFormError.textContent = `Only ${remaining} page${remaining === 1 ? "" : "s"} left in this book.`;
+      logFormError.textContent = t("library.errOnlyNPagesLeft", { count: remaining, n: remaining });
       return;
     }
     const isPastRead = logPastCheckbox.checked;
     const date = isPastRead ? null : logDateInput.value || store.todayISODate();
     if (!isPastRead && date > store.todayISODate()) {
-      logFormError.textContent = "Date can't be in the future.";
+      logFormError.textContent = t("library.errDateFuture");
       return;
     }
     logFormError.textContent = "";
@@ -1110,7 +1154,7 @@
       if (!finished) logPagesInput.focus();
 
       // if this log just finished the book, the rate-modal is about to take
-      // over the "nudge" job for today, so mark it nudged now — otherwise
+      // over the "nudge" job for today, so mark it nudged now, otherwise
       // renderGrid()'s nudge pass would also pop the corner bubble underneath it
       let willOpenRateModal = false;
       if (finished) {
@@ -1130,12 +1174,151 @@
       }
     } catch (err) {
       console.error(err);
-      logFormError.textContent = "Could not save: " + (err && err.message ? err.message : "unknown error");
+      logFormError.textContent = t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError"));
+    }
+  });
+
+  // ---- wishlist: small "corner" panel for books not owned/tracked yet ----
+
+  function renderWishlistPanel() {
+    const items = store.sortedWishlistItems(ctx.wishlistData);
+    wishlistCount.textContent = String(items.length);
+    wishlistCount.classList.toggle("hidden", items.length === 0);
+    wishlistList.innerHTML = "";
+
+    if (items.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "no-logs-note";
+      empty.textContent = t("wishlist.empty");
+      wishlistList.appendChild(empty);
+      return;
+    }
+
+    items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "wishlist-item";
+
+      const info = document.createElement("div");
+      info.className = "wishlist-item-info";
+      const titleEl = document.createElement("p");
+      titleEl.className = "wishlist-item-title";
+      titleEl.textContent = item.title;
+      info.appendChild(titleEl);
+      if (item.author) {
+        const authorEl = document.createElement("p");
+        authorEl.className = "wishlist-item-author";
+        authorEl.textContent = item.author;
+        info.appendChild(authorEl);
+      }
+      row.appendChild(info);
+
+      const actions = document.createElement("div");
+      actions.className = "wishlist-item-actions";
+
+      if (item.link) {
+        const link = document.createElement("a");
+        link.className = "wishlist-item-action";
+        link.href = item.link;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.setAttribute("aria-label", t("wishlist.openLinkAria", { title: item.title }));
+        link.innerHTML = LINK_SVG;
+        actions.appendChild(link);
+      }
+
+      const convertBtn = document.createElement("button");
+      convertBtn.type = "button";
+      convertBtn.className = "wishlist-item-action";
+      convertBtn.title = t("wishlist.moveToLibraryTitle");
+      convertBtn.setAttribute("aria-label", t("wishlist.moveToLibraryAria", { title: item.title }));
+      convertBtn.innerHTML = MOVE_SVG;
+      convertBtn.addEventListener("click", () => {
+        convertingWishlistItemId = item.id;
+        closeWishlistPanel();
+        openAddBookModal({ title: item.title, author: item.author });
+      });
+      actions.appendChild(convertBtn);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "wishlist-item-action wishlist-item-remove";
+      removeBtn.setAttribute("aria-label", t("wishlist.removeAria", { title: item.title }));
+      removeBtn.innerHTML = TRASH_SVG;
+      removeBtn.addEventListener("click", async () => {
+        store.deleteWishlistItem(ctx.wishlistData, item.id);
+        await persistWishlist();
+        renderWishlistPanel();
+      });
+      actions.appendChild(removeBtn);
+
+      row.appendChild(actions);
+      wishlistList.appendChild(row);
+    });
+  }
+
+  function openWishlistPanel() {
+    wishlistPanel.classList.remove("hidden");
+    wishlistToggle.setAttribute("aria-expanded", "true");
+  }
+
+  function closeWishlistPanel() {
+    wishlistPanel.classList.add("hidden");
+    wishlistToggle.setAttribute("aria-expanded", "false");
+  }
+
+  wishlistToggle.addEventListener("click", () => {
+    if (wishlistPanel.classList.contains("hidden")) openWishlistPanel();
+    else closeWishlistPanel();
+  });
+  wishlistPanelClose.addEventListener("click", closeWishlistPanel);
+
+  document.addEventListener("click", (e) => {
+    if (wishlistPanel.classList.contains("hidden")) return;
+    if (wishlistWidget.contains(e.target)) return;
+    closeWishlistPanel();
+  });
+
+  wishlistForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = wishlistTitleInput.value.trim();
+    const author = wishlistAuthorInput.value.trim();
+    const link = wishlistLinkInput.value.trim();
+    if (!title) {
+      wishlistFormError.textContent = t("wishlist.errTitleRequired");
+      return;
+    }
+    wishlistFormError.textContent = "";
+    try {
+      store.createWishlistItem(ctx.wishlistData, { title, author, link });
+      await persistWishlist();
+      wishlistForm.reset();
+      renderWishlistPanel();
+      wishlistTitleInput.focus();
+    } catch (err) {
+      console.error(err);
+      wishlistFormError.textContent = t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError"));
+    }
+  });
+
+  RI.i18n.onChange(() => {
+    if (!ctx) return;
+    renderGrid();
+    renderWishlistPanel();
+    if (isOverlayOpen(bookModalOverlay)) {
+      bookModalTitle.textContent = editingBookId ? t("library.modalTitleEdit") : t("library.modalTitleAdd");
+      bookModalSubmit.textContent = editingBookId ? t("library.submitEdit") : t("library.submitAdd");
+      renderCategoryChecklist(selectedCategoryIds());
+    }
+    if (isOverlayOpen(logModalOverlay) && logModalBookId) {
+      const book = store.getBookById(ctx.library, logModalBookId);
+      if (book) applyRemainingPagesState(book);
     }
   });
 
   RI.boot((bootCtx) => {
     ctx = bootCtx;
+    wishlistWidget.classList.remove("hidden");
     renderGrid();
+    renderWishlistPanel();
   });
 })();

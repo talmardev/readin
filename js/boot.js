@@ -3,6 +3,7 @@ window.RI = window.RI || {};
 RI.boot = function (onReady) {
   "use strict";
 
+  const t = RI.i18n.t;
   const screen = document.getElementById("setup-screen");
   const titleEl = document.getElementById("setup-title");
   const textEl = document.getElementById("setup-text");
@@ -10,6 +11,14 @@ RI.boot = function (onReady) {
   const altBtn = document.getElementById("setup-alt-btn");
   const errorEl = document.getElementById("setup-error");
   const appShell = document.getElementById("app-shell");
+
+  // setStateSetup/setStateGrant/the unsupported-browser branch all set button
+  // text via textContent once, outside the data-i18n scan, so a live language
+  // switch needs to explicitly re-run whichever one is currently on screen
+  let currentSetupState = null;
+  RI.i18n.onChange(() => {
+    if (currentSetupState) currentSetupState();
+  });
 
   function showError(message) {
     errorEl.textContent = message;
@@ -22,23 +31,23 @@ RI.boot = function (onReady) {
   }
 
   function setStateSetup() {
-    titleEl.textContent = "Set up your library";
-    textEl.textContent =
-      "Pick the folder this app lives in. readin' will create a data/ folder inside it to store your books, covers, and reading logs as real files on disk.";
-    actionBtn.textContent = "Choose the readin' folder";
+    currentSetupState = setStateSetup;
+    titleEl.textContent = t("setup.setupTitle");
+    textEl.textContent = t("setup.setupText");
+    actionBtn.textContent = t("setup.chooseFolderBtn");
     actionBtn.classList.remove("hidden");
     actionBtn.onclick = handleChooseFolder;
     altBtn.classList.add("hidden");
   }
 
   function setStateGrant() {
-    titleEl.textContent = "Welcome back";
-    textEl.textContent =
-      "readin' needs permission to read and write your data folder again this session.";
-    actionBtn.textContent = "Continue to your library";
+    currentSetupState = setStateGrant;
+    titleEl.textContent = t("setup.welcomeBack");
+    textEl.textContent = t("setup.grantText");
+    actionBtn.textContent = t("setup.continueBtn");
     actionBtn.classList.remove("hidden");
     actionBtn.onclick = handleGrantPermission;
-    altBtn.textContent = "Choose a different folder";
+    altBtn.textContent = t("setup.chooseDifferentFolderBtn");
     altBtn.onclick = handleChooseFolder;
     altBtn.classList.remove("hidden");
   }
@@ -49,12 +58,13 @@ RI.boot = function (onReady) {
       const { library: libraryBase, logs } = await RI.fs.readLibraryAndLogs(dataHandle);
       const library = { books: libraryBase.books, categories: libraryBase.categories, logs };
       const ratingsData = await RI.fs.readRatings(dataHandle);
+      const wishlistData = await RI.fs.readWishlist(dataHandle);
       screen.classList.add("hidden");
       appShell.classList.remove("hidden");
-      onReady({ library, dataHandle, coversHandle, rootHandle, ratingsData });
+      onReady({ library, dataHandle, coversHandle, rootHandle, ratingsData, wishlistData });
     } catch (err) {
       console.error(err);
-      showError("Could not read your data folder. " + (err && err.message ? err.message : ""));
+      showError(t("setup.errCouldNotRead") + (err && err.message ? err.message : ""));
     }
   }
 
@@ -66,7 +76,7 @@ RI.boot = function (onReady) {
     } catch (err) {
       if (err && err.name === "AbortError") return;
       console.error(err);
-      showError("Could not access that folder. " + (err && err.message ? err.message : ""));
+      showError(t("setup.errCouldNotAccess") + (err && err.message ? err.message : ""));
     }
   }
 
@@ -77,23 +87,27 @@ RI.boot = function (onReady) {
       const rootHandle = await RI.fs.getStoredRootHandle();
       const perm = await RI.fs.requestPermission(rootHandle);
       if (perm !== "granted") {
-        showError("Access was not granted, so readin' cannot load your library.");
+        showError(t("setup.errAccessNotGranted"));
         return;
       }
       await proceedWithRoot(rootHandle);
     } catch (err) {
       console.error(err);
-      showError("Something went wrong requesting access. " + (err && err.message ? err.message : ""));
+      showError(t("setup.errRequestFailed") + (err && err.message ? err.message : ""));
     }
+  }
+
+  function setStateUnsupported() {
+    currentSetupState = setStateUnsupported;
+    titleEl.textContent = t("setup.unsupportedTitle");
+    textEl.textContent = t("setup.unsupportedText");
+    actionBtn.classList.add("hidden");
+    altBtn.classList.add("hidden");
   }
 
   (async function init() {
     if (!RI.fs.isSupported()) {
-      titleEl.textContent = "Browser not supported";
-      textEl.textContent =
-        "readin' uses the File System Access API to store your library as real files, which only works in Chrome or Edge. Please open this app there.";
-      actionBtn.classList.add("hidden");
-      altBtn.classList.add("hidden");
+      setStateUnsupported();
       return;
     }
 
