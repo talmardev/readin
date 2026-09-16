@@ -3,13 +3,11 @@
 
   const store = RI.store;
   const fs = RI.fs;
+  const t = RI.i18n.t;
 
   const WEEK_COUNT = 53;
   // must match .heatmap-cell's width + gap in css, not derived automatically
   const CELL_STEP = 15;
-  const MONTH_NAMES = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
 
   let ctx = null;
   let logListCoverUrls = [];
@@ -59,7 +57,7 @@
 
   function formatDateLong(isoDate) {
     const d = store.parseISODate(isoDate);
-    return d.toLocaleDateString(undefined, {
+    return d.toLocaleDateString(RI.i18n.getLocale(), {
       weekday: "long",
       month: "short",
       day: "numeric",
@@ -68,15 +66,16 @@
   }
 
   function formatDateDisplay(isoDate) {
-    if (!isoDate) return "—";
+    if (!isoDate) return t("common.dash");
     const d = store.parseISODate(isoDate);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(RI.i18n.getLocale(), { month: "short", day: "numeric", year: "numeric" });
   }
 
   function renderHeatmap() {
     const todayISO = store.todayISODate();
     const weeks = buildHeatmapWeeks(todayISO, WEEK_COUNT);
     const pagesPerDay = store.pagesPerDay(ctx.library);
+    const monthNames = RI.i18n.tArray("streak.monthNames");
 
     heatmapGrid.innerHTML = "";
     heatmapMonths.innerHTML = "";
@@ -88,7 +87,7 @@
       if (monthOfWeek !== lastMonth) {
         lastMonth = monthOfWeek;
         const label = document.createElement("span");
-        label.textContent = MONTH_NAMES[monthOfWeek];
+        label.textContent = monthNames[monthOfWeek];
         label.style.left = w * CELL_STEP + "px";
         heatmapMonths.appendChild(label);
       }
@@ -103,8 +102,8 @@
           const level = levelForPages(pages);
           if (level > 0) cell.classList.add("lvl-" + level);
           if (day.date === todayISO) cell.classList.add("is-today");
-          const pagesLabel = pages > 0 ? `${pages} page${pages === 1 ? "" : "s"}` : "No reading";
-          cell.title = `${pagesLabel} on ${formatDateLong(day.date)}`;
+          const pagesLabel = pages > 0 ? t("streak.cellPages", { count: pages, n: pages }) : t("streak.cellNoReading");
+          cell.title = t("streak.cellTooltip", { pagesLabel, date: formatDateLong(day.date) });
         }
         heatmapGrid.appendChild(cell);
       });
@@ -115,21 +114,21 @@
     const current = store.currentStreak(ctx.library);
     const longest = store.longestStreak(ctx.library);
     streakDaysNum.textContent = current;
-    streakDaysWord.textContent = current === 1 ? "day" : "days";
+    streakDaysWord.textContent = t("streak.day", { count: current });
     longestStreakNum.textContent = longest;
 
     const today = store.todayISODate();
     const readToday = store.datedLogDateSet(ctx.library).has(today);
     streakTodayDot.classList.toggle("hidden", !(current > 0 && readToday));
 
-    miniTotalPages.textContent = store.totalPagesRead(ctx.library).toLocaleString();
+    miniTotalPages.textContent = store.totalPagesRead(ctx.library).toLocaleString(RI.i18n.getLocale());
     miniBooksRead.textContent = store.booksReadCount(ctx.library);
 
     const avgDays = store.averageDaysToComplete(ctx.library);
-    miniAvgDays.textContent = avgDays === null ? "—" : Math.round(avgDays * 10) / 10;
+    miniAvgDays.textContent = avgDays === null ? t("common.dash") : Math.round(avgDays * 10) / 10;
 
     const avgPagesDay = store.averagePagesPerDay(ctx.library);
-    miniAvgPagesDay.textContent = avgPagesDay === null ? "—" : Math.round(avgPagesDay * 10) / 10;
+    miniAvgPagesDay.textContent = avgPagesDay === null ? t("common.dash") : Math.round(avgPagesDay * 10) / 10;
   }
 
   function coverPlaceholder(book) {
@@ -175,15 +174,15 @@
 
       const pages = document.createElement("p");
       pages.className = "log-row-pages";
-      pages.textContent = `${log.pagesRead} page${log.pagesRead === 1 ? "" : "s"}`;
+      pages.textContent = t("streak.rowPages", { count: log.pagesRead, n: log.pagesRead });
 
       const date = document.createElement("p");
       date.className = "log-row-date";
-      date.textContent = log.isPastRead ? "Past read" : formatDateDisplay(log.date);
+      date.textContent = log.isPastRead ? t("streak.rowPastRead") : formatDateDisplay(log.date);
 
       const title = document.createElement("p");
       title.className = "log-row-title";
-      title.textContent = book ? book.title : "Deleted book";
+      title.textContent = book ? book.title : t("streak.rowDeletedBook");
 
       lines.appendChild(pages);
       lines.appendChild(date);
@@ -193,10 +192,24 @@
     }
   }
 
-  RI.boot((bootCtx) => {
-    ctx = bootCtx;
+  function renderAll() {
     renderStats();
     renderHeatmap();
     renderLogList();
+  }
+
+  function setDocTitle() {
+    document.title = "readin' - " + t("nav.stats");
+  }
+
+  RI.i18n.onChange(() => {
+    setDocTitle();
+    if (ctx) renderAll();
+  });
+
+  RI.boot((bootCtx) => {
+    ctx = bootCtx;
+    setDocTitle();
+    renderAll();
   });
 })();

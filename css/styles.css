@@ -174,6 +174,109 @@ a {
   border-bottom-color: var(--green-bright);
 }
 
+.lang-switcher {
+  position: relative;
+}
+
+.lang-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.lang-switcher-btn:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.lang-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 13px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+
+.lang-flag img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lang-flag-emoji {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.lang-switcher-code {
+  letter-spacing: 0.02em;
+}
+
+.lang-switcher-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 168px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  z-index: 30;
+}
+
+.lang-switcher-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lang-switcher-item:hover {
+  background: var(--surface-2);
+}
+
+.lang-switcher-item.is-active {
+  color: var(--green-deep);
+  font-weight: 700;
+}
+
+.lang-switcher-setup {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.lang-switcher-setup .lang-switcher-menu {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .page-shell {
   max-width: 1180px;
   margin: 0 auto;
@@ -297,7 +400,8 @@ label {
 
 input[type="text"],
 input[type="number"],
-input[type="date"] {
+input[type="date"],
+input[type="url"] {
   width: 100%;
   font-family: var(--font-body);
   font-size: 0.98rem;
@@ -311,7 +415,8 @@ input[type="date"] {
 
 input[type="text"]:focus,
 input[type="number"]:focus,
-input[type="date"]:focus {
+input[type="date"]:focus,
+input[type="url"]:focus {
   outline: none;
   border-color: var(--green-deep);
   background: var(--surface);
@@ -712,7 +817,7 @@ input[disabled] {
 }
 
 /* two-layer glyph: a muted background star with a green foreground star
-   clipped to 0/50/100% width on top — gives half-star fills without SVG. */
+   clipped to 0/50/100% width on top, gives half-star fills without SVG. */
 .star-cell {
   position: relative;
   display: inline-block;
@@ -747,7 +852,7 @@ input[disabled] {
 }
 
 /* interactive picker: same bg/fg glyph as .star-cell, but with two
-   invisible half-width buttons stacked on top as real click targets —
+   invisible half-width buttons stacked on top as real click targets:
    .star-half-lo/.star-half-hi, not pixel-position math against
    getBoundingClientRect, so half-star selection is a reliable DOM hit
    regardless of zoom/DPI/click precision. */
@@ -1546,8 +1651,8 @@ input[disabled] {
   opacity: 0.5;
 }
 
-/* all:unset above also strips the global :focus-visible outline — restore it
-   with higher specificity so keyboard focus stays visible on these rows */
+/* all:unset above also strips the global :focus-visible outline, so restore
+   it with higher specificity to keep keyboard focus visible on these rows */
 .read-book-row:focus-visible {
   outline: 2px solid var(--green-deep);
   outline-offset: 2px;
@@ -1781,6 +1886,154 @@ input[disabled] {
   margin: 0 auto 16px;
   width: 14px;
   height: 14px;
+}
+
+/* ---- Wishlist corner widget (library page only) ---- */
+
+.wishlist-widget {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 90;
+}
+
+.wishlist-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  padding: 10px 16px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.wishlist-toggle:hover {
+  border-color: var(--green-deep);
+  color: var(--green-deep);
+}
+
+.wishlist-count {
+  background: var(--green-deep);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wishlist-panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  width: 300px;
+  max-width: calc(100vw - 40px);
+  max-height: min(440px, 70vh);
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 18px 18px 14px;
+  animation: modal-in 0.16s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.wishlist-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.wishlist-panel-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.wishlist-input {
+  margin-bottom: 8px;
+}
+
+#wishlist-form .error-text {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.wishlist-list {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.wishlist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.wishlist-item-info {
+  min-width: 0;
+}
+
+.wishlist-item-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wishlist-item-author {
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wishlist-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.wishlist-item-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.wishlist-item-action:hover {
+  color: var(--green-deep);
+  background: var(--surface-2);
+}
+
+.wishlist-item-remove:hover {
+  color: var(--danger);
 }
 
 @media (max-width: 560px) {
