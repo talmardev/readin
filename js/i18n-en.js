@@ -290,6 +290,10 @@ RI.i18n.registerLanguage(
       moveToLibraryAria: "Move {title} to your library",
       removeAria: "Remove {title} from wishlist",
       openLinkAria: "Open link for {title}",
+      noCover: "No cover",
+      chooseCoverAria: "Choose a cover image",
+      changeCoverAria: "Change cover for {title}",
+      removeCoverAria: "Remove cover for {title}",
     },
   }
 );

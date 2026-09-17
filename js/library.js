@@ -99,16 +99,27 @@
   const wishlistPanel = document.getElementById("wishlist-panel");
   const wishlistPanelClose = document.getElementById("wishlist-panel-close");
   const wishlistForm = document.getElementById("wishlist-form");
+  const wishlistCoverDrop = document.getElementById("wishlist-cover-drop");
+  const wishlistCoverDropPlaceholder = document.getElementById("wishlist-cover-drop-placeholder");
+  const wishlistCoverPreview = document.getElementById("wishlist-cover-preview");
+  const wishlistCoverInput = document.getElementById("wishlist-cover-input");
   const wishlistTitleInput = document.getElementById("wishlist-title-input");
   const wishlistAuthorInput = document.getElementById("wishlist-author-input");
   const wishlistLinkInput = document.getElementById("wishlist-link-input");
   const wishlistFormError = document.getElementById("wishlist-form-error");
   const wishlistList = document.getElementById("wishlist-list");
+  const wishlistItemCoverInput = document.getElementById("wishlist-item-cover-input");
 
   // set while the "move to library" flow has the Add Book modal open for a
   // wishlist entry: removed from the wishlist on successful submit, left
   // alone on cancel (see closeBookModal)
   let convertingWishlistItemId = null;
+  let pendingWishlistCoverFile = null;
+  let wishlistCoverPreviewUrl = null;
+  let wishlistCoverUrls = new Map();
+  // which wishlist item's cover the shared #wishlist-item-cover-input is
+  // about to replace, set right before triggering its click()
+  let editingWishlistCoverItemId = null;
 
   async function persist() {
     try {
@@ -900,9 +911,12 @@
       }
       await persist();
       if (!editingBookId && convertingWishlistItemId) {
-        store.deleteWishlistItem(ctx.wishlistData, convertingWishlistItemId);
+        const removedWishlistItem = store.deleteWishlistItem(ctx.wishlistData, convertingWishlistItemId);
+        if (removedWishlistItem && removedWishlistItem.coverFile) {
+          await fs.deleteCover(ctx.coversHandle, removedWishlistItem.coverFile);
+        }
         await persistWishlist();
-        renderWishlistPanel();
+        await renderWishlistPanel();
       }
       closeBookModal();
       await renderGrid();
@@ -1180,10 +1194,13 @@
 
   // ---- wishlist: small "corner" panel for books not owned/tracked yet ----
 
-  function renderWishlistPanel() {
+  async function renderWishlistPanel() {
     const items = store.sortedWishlistItems(ctx.wishlistData);
     wishlistCount.textContent = String(items.length);
     wishlistCount.classList.toggle("hidden", items.length === 0);
+
+    wishlistCoverUrls.forEach((url) => URL.revokeObjectURL(url));
+    wishlistCoverUrls = new Map();
     wishlistList.innerHTML = "";
 
     if (items.length === 0) {
@@ -1194,9 +1211,55 @@
       return;
     }
 
-    items.forEach((item) => {
+    for (const item of items) {
       const row = document.createElement("div");
       row.className = "wishlist-item";
+
+      const coverWrap = document.createElement("div");
+      coverWrap.className = "wishlist-item-cover-wrap";
+
+      const coverUrl = await resolveCoverUrl(item);
+      let coverEl;
+      if (coverUrl) {
+        wishlistCoverUrls.set(item.id, coverUrl);
+        coverEl = document.createElement("img");
+        coverEl.className = "wishlist-item-cover";
+        coverEl.src = coverUrl;
+        coverEl.alt = "";
+      } else {
+        coverEl = document.createElement("div");
+        coverEl.className = "wishlist-item-cover-placeholder";
+        coverEl.textContent = item.title;
+      }
+      coverEl.setAttribute("role", "button");
+      coverEl.tabIndex = 0;
+      coverEl.setAttribute("aria-label", t("wishlist.changeCoverAria", { title: item.title }));
+      coverEl.addEventListener("click", () => triggerWishlistCoverChange(item.id));
+      coverEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          triggerWishlistCoverChange(item.id);
+        }
+      });
+      coverWrap.appendChild(coverEl);
+
+      if (item.coverFile) {
+        const removeCoverBtn = document.createElement("button");
+        removeCoverBtn.type = "button";
+        removeCoverBtn.className = "wishlist-item-cover-remove";
+        removeCoverBtn.setAttribute("aria-label", t("wishlist.removeCoverAria", { title: item.title }));
+        removeCoverBtn.innerHTML = "&times;";
+        removeCoverBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          await fs.deleteCover(ctx.coversHandle, item.coverFile);
+          store.updateWishlistItem(ctx.wishlistData, item.id, { coverFile: null });
+          await persistWishlist();
+          await renderWishlistPanel();
+        });
+        coverWrap.appendChild(removeCoverBtn);
+      }
+
+      row.appendChild(coverWrap);
 
       const info = document.createElement("div");
       info.className = "wishlist-item-info";
@@ -1245,15 +1308,16 @@
       removeBtn.setAttribute("aria-label", t("wishlist.removeAria", { title: item.title }));
       removeBtn.innerHTML = TRASH_SVG;
       removeBtn.addEventListener("click", async () => {
+        if (item.coverFile) await fs.deleteCover(ctx.coversHandle, item.coverFile);
         store.deleteWishlistItem(ctx.wishlistData, item.id);
         await persistWishlist();
-        renderWishlistPanel();
+        await renderWishlistPanel();
       });
       actions.appendChild(removeBtn);
 
       row.appendChild(actions);
       wishlistList.appendChild(row);
-    });
+    }
   }
 
   function openWishlistPanel() {
@@ -1278,6 +1342,75 @@
     closeWishlistPanel();
   });
 
+  function setWishlistCoverPreview(url) {
+    if (wishlistCoverPreviewUrl && wishlistCoverPreviewUrl !== url) {
+      URL.revokeObjectURL(wishlistCoverPreviewUrl);
+    }
+    wishlistCoverPreviewUrl = url;
+    if (url) {
+      wishlistCoverPreview.src = url;
+      wishlistCoverPreview.classList.remove("hidden");
+      wishlistCoverDropPlaceholder.classList.add("hidden");
+    } else {
+      wishlistCoverPreview.src = "";
+      wishlistCoverPreview.classList.add("hidden");
+      wishlistCoverDropPlaceholder.classList.remove("hidden");
+    }
+  }
+
+  wishlistCoverDrop.addEventListener("click", () => wishlistCoverInput.click());
+  wishlistCoverDrop.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      wishlistCoverInput.click();
+    }
+  });
+
+  wishlistCoverInput.addEventListener("change", () => {
+    const file = wishlistCoverInput.files && wishlistCoverInput.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      wishlistFormError.textContent = t("library.errChooseImage");
+      return;
+    }
+    wishlistFormError.textContent = "";
+    pendingWishlistCoverFile = file;
+    setWishlistCoverPreview(URL.createObjectURL(file));
+  });
+
+  // shared by every rendered wishlist item's cover: clicking one sets this
+  // and reuses the single hidden #wishlist-item-cover-input rather than
+  // building a per-item file input
+  function triggerWishlistCoverChange(itemId) {
+    editingWishlistCoverItemId = itemId;
+    wishlistItemCoverInput.click();
+  }
+
+  wishlistItemCoverInput.addEventListener("change", async () => {
+    const file = wishlistItemCoverInput.files && wishlistItemCoverInput.files[0];
+    const itemId = editingWishlistCoverItemId;
+    editingWishlistCoverItemId = null;
+    wishlistItemCoverInput.value = "";
+    if (!file || !itemId) return;
+    if (!file.type.startsWith("image/")) {
+      RI.toast(t("library.errChooseImage"), "error");
+      return;
+    }
+    const item = ctx.wishlistData.items.find((i) => i.id === itemId);
+    if (!item) return;
+    try {
+      const oldCover = item.coverFile;
+      const newPath = await fs.saveCover(ctx.coversHandle, itemId, file);
+      if (oldCover && oldCover !== newPath) await fs.deleteCover(ctx.coversHandle, oldCover);
+      store.updateWishlistItem(ctx.wishlistData, itemId, { coverFile: newPath });
+      await persistWishlist();
+      await renderWishlistPanel();
+    } catch (err) {
+      console.error(err);
+      RI.toast(t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
+    }
+  });
+
   wishlistForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = wishlistTitleInput.value.trim();
@@ -1289,10 +1422,16 @@
     }
     wishlistFormError.textContent = "";
     try {
-      store.createWishlistItem(ctx.wishlistData, { title, author, link });
+      const item = store.createWishlistItem(ctx.wishlistData, { title, author, link });
+      if (pendingWishlistCoverFile) {
+        const path = await fs.saveCover(ctx.coversHandle, item.id, pendingWishlistCoverFile);
+        store.updateWishlistItem(ctx.wishlistData, item.id, { coverFile: path });
+      }
       await persistWishlist();
       wishlistForm.reset();
-      renderWishlistPanel();
+      pendingWishlistCoverFile = null;
+      setWishlistCoverPreview(null);
+      await renderWishlistPanel();
       wishlistTitleInput.focus();
     } catch (err) {
       console.error(err);

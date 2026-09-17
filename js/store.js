@@ -537,17 +537,29 @@ RI.store = (function () {
     return { items: [] };
   }
 
-  // title required, author/link optional; deliberately no totalPages/cover/
-  // categories, a wishlist entry is just enough to remember a book exists
+  // title required, author/link optional; deliberately no totalPages/
+  // categories, a wishlist entry is just enough to remember a book exists.
+  // coverFile starts null and is only ever set afterward via
+  // updateWishlistItem, once fs.saveCover has a real id to key the file by.
   function createWishlistItem(wishlistData, { title, author, link }) {
     const item = {
       id: generateId(),
       title: (title || "").trim(),
       author: (author || "").trim(),
       link: (link || "").trim() || null,
+      coverFile: null,
       createdAt: new Date().toISOString(),
     };
     wishlistData.items.push(item);
+    return item;
+  }
+
+  // only coverFile is ever patched here; title/author/link stay fixed once
+  // a wishlist entry is created
+  function updateWishlistItem(wishlistData, itemId, patch) {
+    const item = wishlistData.items.find((i) => i.id === itemId);
+    if (!item) return null;
+    if (patch.coverFile !== undefined) item.coverFile = patch.coverFile;
     return item;
   }
 
@@ -622,6 +634,7 @@ RI.store = (function () {
 
     createDefaultWishlist,
     createWishlistItem,
+    updateWishlistItem,
     deleteWishlistItem,
     sortedWishlistItems,
 

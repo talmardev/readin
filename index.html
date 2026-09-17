@@ -205,14 +205,24 @@
     </div>
 
     <form id="wishlist-form" novalidate>
-      <input type="text" id="wishlist-title-input" class="wishlist-input" maxlength="200" required placeholder="Title" data-i18n-placeholder="wishlist.titlePlaceholder" aria-label="Title" data-i18n-aria-label="wishlist.titleAria" />
-      <input type="text" id="wishlist-author-input" class="wishlist-input" maxlength="200" placeholder="Author (optional)" data-i18n-placeholder="wishlist.authorPlaceholder" aria-label="Author" data-i18n-aria-label="wishlist.authorAria" />
-      <input type="url" id="wishlist-link-input" class="wishlist-input" maxlength="500" placeholder="Link (optional)" data-i18n-placeholder="wishlist.linkPlaceholder" aria-label="Link" data-i18n-aria-label="wishlist.linkAria" />
+      <div class="wishlist-cover-upload">
+        <div class="wishlist-cover-drop" id="wishlist-cover-drop" role="button" tabindex="0" aria-label="Choose a cover image" data-i18n-aria-label="wishlist.chooseCoverAria">
+          <span id="wishlist-cover-drop-placeholder" data-i18n="wishlist.noCover">No cover</span>
+          <img id="wishlist-cover-preview" class="hidden" alt="" />
+        </div>
+        <div class="wishlist-fields">
+          <input type="text" id="wishlist-title-input" class="wishlist-input" maxlength="200" required placeholder="Title" data-i18n-placeholder="wishlist.titlePlaceholder" aria-label="Title" data-i18n-aria-label="wishlist.titleAria" />
+          <input type="text" id="wishlist-author-input" class="wishlist-input" maxlength="200" placeholder="Author (optional)" data-i18n-placeholder="wishlist.authorPlaceholder" aria-label="Author" data-i18n-aria-label="wishlist.authorAria" />
+          <input type="url" id="wishlist-link-input" class="wishlist-input" maxlength="500" placeholder="Link (optional)" data-i18n-placeholder="wishlist.linkPlaceholder" aria-label="Link" data-i18n-aria-label="wishlist.linkAria" />
+        </div>
+      </div>
+      <input type="file" id="wishlist-cover-input" accept="image/*" class="hidden" />
       <p class="error-text" id="wishlist-form-error"></p>
       <button type="submit" class="btn btn-primary btn-block" data-i18n="wishlist.addBtn">Add to wishlist</button>
     </form>
 
     <div class="wishlist-list" id="wishlist-list"></div>
+    <input type="file" id="wishlist-item-cover-input" accept="image/*" class="hidden" />
   </div>
 </div>
 
