@@ -1932,15 +1932,15 @@ input[disabled] {
   position: absolute;
   left: 0;
   bottom: calc(100% + 10px);
-  width: 300px;
+  width: 380px;
   max-width: calc(100vw - 40px);
-  max-height: min(440px, 70vh);
+  max-height: min(500px, 75vh);
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  padding: 18px 18px 14px;
+  padding: 20px 20px 16px;
   animation: modal-in 0.16s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
@@ -1970,8 +1970,14 @@ input[disabled] {
 
 .wishlist-cover-upload {
   display: flex;
-  justify-content: center;
-  margin-bottom: 10px;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.wishlist-fields {
+  flex: 1;
+  min-width: 0;
 }
 
 .wishlist-cover-drop {
