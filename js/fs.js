@@ -19,6 +19,14 @@ RI.fs = (function () {
     return typeof window.showDirectoryPicker === "function";
   }
 
+  // Brave supports the File System Access API but ships the flag disabled by
+  // default; navigator.brave.isBrave() is Brave's own detection API,
+  // deliberately async so sites can't use it to synchronously fingerprint
+  // Brave users
+  async function isBrave() {
+    return !!(navigator.brave && (await navigator.brave.isBrave()));
+  }
+
   function openDb() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -335,6 +343,7 @@ RI.fs = (function () {
 
   return {
     isSupported,
+    isBrave,
     getStoredRootHandle,
     pickRootFolder,
     forgetRootFolder,

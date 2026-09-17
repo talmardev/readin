@@ -27,6 +27,9 @@ RI.i18n.registerLanguage(
       unsupportedTitle: "Navegador não suportado",
       unsupportedText:
         "A readin' usa a File System Access API para guardar a tua biblioteca como ficheiros reais, o que só funciona no Chrome ou no Edge. Abre esta aplicação num desses navegadores.",
+      unsupportedBraveTitle: "O Brave precisa de uma definição ativada",
+      unsupportedBraveText:
+        "O Brave suporta a File System Access API, mas ela vem desativada por padrão. Vai a brave://flags/#file-system-access-api, ativa-a, e reinicia o Brave.",
       footerNote: "A readin' só funciona no Chrome ou no Edge e mantém tudo no teu computador.",
     },
 

@@ -105,9 +105,21 @@ RI.boot = function (onReady) {
     altBtn.classList.add("hidden");
   }
 
+  function setStateUnsupportedBrave() {
+    currentSetupState = setStateUnsupportedBrave;
+    titleEl.textContent = t("setup.unsupportedBraveTitle");
+    textEl.textContent = t("setup.unsupportedBraveText");
+    actionBtn.classList.add("hidden");
+    altBtn.classList.add("hidden");
+  }
+
   (async function init() {
     if (!RI.fs.isSupported()) {
-      setStateUnsupported();
+      if (await RI.fs.isBrave()) {
+        setStateUnsupportedBrave();
+      } else {
+        setStateUnsupported();
+      }
       return;
     }
 
