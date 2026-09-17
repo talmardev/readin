@@ -192,21 +192,23 @@
 </div>
 
 <div class="wishlist-widget hidden" id="wishlist-widget">
-  <button type="button" class="wishlist-toggle" id="wishlist-toggle" aria-expanded="false" aria-controls="wishlist-panel">
+  <button type="button" class="wishlist-toggle" id="wishlist-toggle" aria-expanded="false" aria-controls="wishlist-modal-overlay">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
     <span data-i18n="wishlist.title">Wishlist</span>
     <span class="wishlist-count hidden" id="wishlist-count">0</span>
   </button>
+</div>
 
-  <div class="wishlist-panel hidden" id="wishlist-panel">
-    <div class="wishlist-panel-header">
-      <h2 data-i18n="wishlist.title">Wishlist</h2>
+<div id="wishlist-modal-overlay" class="modal-overlay hidden">
+  <div class="modal wishlist-modal" role="dialog" aria-modal="true" aria-labelledby="wishlist-modal-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="wishlist-modal-title" data-i18n="wishlist.title">Wishlist</h2>
       <button type="button" class="modal-close" id="wishlist-panel-close" aria-label="Close wishlist" data-i18n-aria-label="wishlist.closeAria">&times;</button>
     </div>
 
     <form id="wishlist-form" novalidate>
-      <div class="wishlist-cover-upload">
-        <div class="wishlist-cover-drop" id="wishlist-cover-drop" role="button" tabindex="0" aria-label="Choose a cover image" data-i18n-aria-label="wishlist.chooseCoverAria">
+      <div class="cover-upload">
+        <div class="cover-drop" id="wishlist-cover-drop" role="button" tabindex="0" aria-label="Choose a cover image" data-i18n-aria-label="wishlist.chooseCoverAria">
           <span id="wishlist-cover-drop-placeholder" data-i18n="wishlist.noCover">No cover</span>
           <img id="wishlist-cover-preview" class="hidden" alt="" />
         </div>
@@ -221,7 +223,7 @@
       <button type="submit" class="btn btn-primary btn-block" data-i18n="wishlist.addBtn">Add to wishlist</button>
     </form>
 
-    <div class="wishlist-list" id="wishlist-list"></div>
+    <div class="wishlist-grid" id="wishlist-list"></div>
     <input type="file" id="wishlist-item-cover-input" accept="image/*" class="hidden" />
   </div>
 </div>

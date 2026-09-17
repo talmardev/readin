@@ -96,7 +96,7 @@
   const wishlistWidget = document.getElementById("wishlist-widget");
   const wishlistToggle = document.getElementById("wishlist-toggle");
   const wishlistCount = document.getElementById("wishlist-count");
-  const wishlistPanel = document.getElementById("wishlist-panel");
+  const wishlistPanel = document.getElementById("wishlist-modal-overlay");
   const wishlistPanelClose = document.getElementById("wishlist-panel-close");
   const wishlistForm = document.getElementById("wishlist-form");
   const wishlistCoverDrop = document.getElementById("wishlist-cover-drop");
@@ -1212,23 +1212,22 @@
     }
 
     for (const item of items) {
-      const row = document.createElement("div");
-      row.className = "wishlist-item";
+      const cell = document.createElement("div");
+      cell.className = "wishlist-grid-item";
 
       const coverWrap = document.createElement("div");
-      coverWrap.className = "wishlist-item-cover-wrap";
+      coverWrap.className = "wishlist-grid-cover-wrap";
 
       const coverUrl = await resolveCoverUrl(item);
       let coverEl;
       if (coverUrl) {
         wishlistCoverUrls.set(item.id, coverUrl);
         coverEl = document.createElement("img");
-        coverEl.className = "wishlist-item-cover";
         coverEl.src = coverUrl;
         coverEl.alt = "";
       } else {
         coverEl = document.createElement("div");
-        coverEl.className = "wishlist-item-cover-placeholder";
+        coverEl.className = "wishlist-grid-cover-placeholder";
         coverEl.textContent = item.title;
       }
       coverEl.setAttribute("role", "button");
@@ -1246,7 +1245,7 @@
       if (item.coverFile) {
         const removeCoverBtn = document.createElement("button");
         removeCoverBtn.type = "button";
-        removeCoverBtn.className = "wishlist-item-cover-remove";
+        removeCoverBtn.className = "wishlist-grid-cover-remove";
         removeCoverBtn.setAttribute("aria-label", t("wishlist.removeCoverAria", { title: item.title }));
         removeCoverBtn.innerHTML = "&times;";
         removeCoverBtn.addEventListener("click", async (e) => {
@@ -1259,28 +1258,26 @@
         coverWrap.appendChild(removeCoverBtn);
       }
 
-      row.appendChild(coverWrap);
+      cell.appendChild(coverWrap);
 
-      const info = document.createElement("div");
-      info.className = "wishlist-item-info";
       const titleEl = document.createElement("p");
-      titleEl.className = "wishlist-item-title";
+      titleEl.className = "wishlist-grid-title";
       titleEl.textContent = item.title;
-      info.appendChild(titleEl);
+      cell.appendChild(titleEl);
+
       if (item.author) {
         const authorEl = document.createElement("p");
-        authorEl.className = "wishlist-item-author";
+        authorEl.className = "wishlist-grid-author";
         authorEl.textContent = item.author;
-        info.appendChild(authorEl);
+        cell.appendChild(authorEl);
       }
-      row.appendChild(info);
 
       const actions = document.createElement("div");
-      actions.className = "wishlist-item-actions";
+      actions.className = "wishlist-grid-actions";
 
       if (item.link) {
         const link = document.createElement("a");
-        link.className = "wishlist-item-action";
+        link.className = "wishlist-grid-action";
         link.href = item.link;
         link.target = "_blank";
         link.rel = "noopener noreferrer";
@@ -1291,7 +1288,7 @@
 
       const convertBtn = document.createElement("button");
       convertBtn.type = "button";
-      convertBtn.className = "wishlist-item-action";
+      convertBtn.className = "wishlist-grid-action";
       convertBtn.title = t("wishlist.moveToLibraryTitle");
       convertBtn.setAttribute("aria-label", t("wishlist.moveToLibraryAria", { title: item.title }));
       convertBtn.innerHTML = MOVE_SVG;
@@ -1304,7 +1301,7 @@
 
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
-      removeBtn.className = "wishlist-item-action wishlist-item-remove";
+      removeBtn.className = "wishlist-grid-action wishlist-grid-remove";
       removeBtn.setAttribute("aria-label", t("wishlist.removeAria", { title: item.title }));
       removeBtn.innerHTML = TRASH_SVG;
       removeBtn.addEventListener("click", async () => {
@@ -1315,8 +1312,8 @@
       });
       actions.appendChild(removeBtn);
 
-      row.appendChild(actions);
-      wishlistList.appendChild(row);
+      cell.appendChild(actions);
+      wishlistList.appendChild(cell);
     }
   }
 
@@ -1330,16 +1327,11 @@
     wishlistToggle.setAttribute("aria-expanded", "false");
   }
 
-  wishlistToggle.addEventListener("click", () => {
-    if (wishlistPanel.classList.contains("hidden")) openWishlistPanel();
-    else closeWishlistPanel();
-  });
+  wishlistToggle.addEventListener("click", openWishlistPanel);
   wishlistPanelClose.addEventListener("click", closeWishlistPanel);
 
-  document.addEventListener("click", (e) => {
-    if (wishlistPanel.classList.contains("hidden")) return;
-    if (wishlistWidget.contains(e.target)) return;
-    closeWishlistPanel();
+  wishlistPanel.addEventListener("click", (e) => {
+    if (e.target === wishlistPanel) closeWishlistPanel();
   });
 
   function setWishlistCoverPreview(url) {
