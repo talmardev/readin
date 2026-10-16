@@ -83,11 +83,21 @@
   const bookRatingField = document.getElementById("book-rating-field");
   const bookRatingPicker = document.getElementById("book-rating-picker");
 
+  const bookRereadField = document.getElementById("book-reread-field");
+  const bookRereadBtn = document.getElementById("book-reread-btn");
+  const bookRereadUndoBtn = document.getElementById("book-reread-undo-btn");
+  const bookRereadHint = document.getElementById("book-reread-hint");
+  const logRereadBtn = document.getElementById("log-reread-btn");
+  const logRereadNote = document.getElementById("log-reread-note");
+  const logRereadNoteText = document.getElementById("log-reread-note-text");
+  const logRereadUndoBtn = document.getElementById("log-reread-undo-btn");
+
   const rateModalOverlay = document.getElementById("rate-modal-overlay");
   const rateModalBookEl = document.getElementById("rate-modal-book");
   const rateModalPicker = document.getElementById("rate-modal-picker");
   const rateModalClose = document.getElementById("rate-modal-close");
   const rateModalSkip = document.getElementById("rate-modal-skip");
+  const rateModalQuestion = document.getElementById("rate-modal-question");
 
   let rateModalBookId = null;
   let rateModalCoverUrl = null;
@@ -451,6 +461,15 @@
     });
   }
 
+  // "Read 3 times" once the latest read-through is finished, "Read #2" while
+  // it is still in progress
+  function rereadTagText(book) {
+    const n = store.readCountForBook(ctx.library, book.id);
+    return store.isBookFinished(ctx.library, book)
+      ? t("reread.timesRead", { count: n })
+      : t("reread.readNumber", { n });
+  }
+
   async function buildBookCard(book) {
     const progress = store.progressForBook(ctx.library, book);
     const readToday = store.hasLogToday(ctx.library, book.id);
@@ -556,6 +575,13 @@
     meta.appendChild(track);
     meta.appendChild(stats);
 
+    if (store.readCountForBook(ctx.library, book.id) > 1) {
+      const rereadTag = document.createElement("div");
+      rereadTag.className = "reread-tag";
+      rereadTag.textContent = rereadTagText(book);
+      meta.appendChild(rereadTag);
+    }
+
     const rating = store.getRating(ctx.ratingsData, book.id);
     if (rating && rating.stars) {
       meta.appendChild(buildStarRow(rating.stars));
@@ -653,7 +679,16 @@
     info.appendChild(title);
     rateModalBookEl.appendChild(info);
 
-    rateModalStarPicker.setValue(0);
+    // after a reread the previous rating is prefilled and the wording asks
+    // to confirm or change it; data-i18n is swapped so a language switch
+    // keeps the right text
+    const rating = store.getRating(ctx.ratingsData, bookId);
+    const previous = rating && rating.stars ? rating.stars : 0;
+    rateModalQuestion.setAttribute("data-i18n", previous ? "reread.rateQuestionAgain" : "library.rateModalQuestion");
+    rateModalQuestion.textContent = t(previous ? "reread.rateQuestionAgain" : "library.rateModalQuestion");
+    rateModalSkip.setAttribute("data-i18n", previous ? "reread.rateKeep" : "library.rateModalSkip");
+    rateModalSkip.textContent = t(previous ? "reread.rateKeep" : "library.rateModalSkip");
+    rateModalStarPicker.setValue(previous);
     showOverlay(rateModalOverlay);
   }
 
@@ -774,6 +809,7 @@
     setOwnership(null);
     renderCategoryChecklist([]);
     bookRatingField.classList.add("hidden");
+    bookRereadField.classList.add("hidden");
     bookModalDeleteRow.classList.add("hidden");
     bookFormError.textContent = "";
     showOverlay(bookModalOverlay);
@@ -784,6 +820,19 @@
     } else {
       bookTitleInput.focus();
     }
+  }
+
+  // edit modal: "Read again" for a finished book, "Undo reread" while a
+  // fresh reread has no logs yet, nothing otherwise
+  function renderBookRereadField(book) {
+    const finished = store.isBookFinished(ctx.library, book);
+    const canUndo = store.canUndoReread(ctx.library, book.id);
+    bookRereadField.classList.toggle("hidden", !finished && !canUndo);
+    bookRereadBtn.classList.toggle("hidden", !finished);
+    bookRereadUndoBtn.classList.toggle("hidden", !canUndo);
+    bookRereadHint.textContent = canUndo
+      ? t("reread.hintUndo", { n: store.readCountForBook(ctx.library, book.id) })
+      : t("reread.hintStart");
   }
 
   async function openEditBookModal(bookId) {
@@ -808,6 +857,7 @@
       const rating = store.getRating(ctx.ratingsData, book.id);
       bookRatingStarPicker.setValue(rating ? rating.stars || 0 : 0);
     }
+    renderBookRereadField(book);
     bookModalDeleteRow.classList.remove("hidden");
     bookFormError.textContent = "";
     showOverlay(bookModalOverlay);
@@ -976,6 +1026,7 @@
     const sub = document.createElement("p");
     sub.className = "sub";
     sub.textContent = `${t("library.pagesOfTotal", { read: progress.pagesRead, total: progress.totalPages })} · ${progress.percent}%`;
+    if (store.readCountForBook(ctx.library, book.id) > 1) sub.textContent += ` · ${rereadTagText(book)}`;
     info.appendChild(title);
     info.appendChild(sub);
     logModalBookEl.appendChild(info);
@@ -983,7 +1034,7 @@
 
   function renderRecentLogs(bookId) {
     const logs = store
-      .logsForBook(ctx.library, bookId)
+      .logsForCurrentCycle(ctx.library, bookId)
       .slice()
       .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
 
@@ -1043,6 +1094,11 @@
     const finished = remaining <= 0;
     logFinishedNote.classList.toggle("hidden", !finished);
     logForm.classList.toggle("hidden", finished);
+    const canUndoReread = store.canUndoReread(ctx.library, book.id);
+    logRereadNote.classList.toggle("hidden", !canUndoReread);
+    if (canUndoReread) {
+      logRereadNoteText.textContent = t("reread.startedNote", { n: store.readCountForBook(ctx.library, book.id) });
+    }
     if (!finished) {
       logPagesInput.max = remaining;
       logPagesHint.textContent = t("library.pagesReadHintWithRemaining", { count: remaining, n: remaining });
@@ -1171,13 +1227,10 @@
       // over the "nudge" job for today, so mark it nudged now, otherwise
       // renderGrid()'s nudge pass would also pop the corner bubble underneath it
       let willOpenRateModal = false;
-      if (finished) {
-        const rating = store.getRating(ctx.ratingsData, logModalBookId);
-        if (!rating || !rating.stars) {
-          willOpenRateModal = true;
-          store.markRatingNudged(ctx.ratingsData, logModalBookId, store.todayISODate());
-          await persistRatings();
-        }
+      if (finished && store.shouldPromptRating(ctx.library, ctx.ratingsData, logModalBookId)) {
+        willOpenRateModal = true;
+        store.markRatingNudged(ctx.ratingsData, logModalBookId, store.todayISODate());
+        await persistRatings();
       }
 
       await renderGrid();
@@ -1191,6 +1244,45 @@
       logFormError.textContent = t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError"));
     }
   });
+
+  // Rereads: start and undo
+
+  // refreshes whichever modal is showing the book, then the shelf
+  async function refreshAfterRereadChange(bookId) {
+    const book = store.getBookById(ctx.library, bookId);
+    if (!book) return;
+    if (isOverlayOpen(logModalOverlay) && logModalBookId === bookId) {
+      await renderLogModalBookInfo(book);
+      const { finished } = applyRemainingPagesState(book);
+      renderRecentLogs(bookId);
+      logPagesInput.value = "";
+      logStoppedInput.value = "";
+      logFormError.textContent = "";
+      if (!finished) logPagesInput.focus();
+    }
+    if (isOverlayOpen(bookModalOverlay) && editingBookId === bookId) {
+      bookRatingField.classList.toggle("hidden", !store.isBookFinished(ctx.library, book));
+      renderBookRereadField(book);
+    }
+    await renderGrid();
+  }
+
+  async function startRereadFor(bookId) {
+    if (!bookId || !store.startReread(ctx.library, bookId)) return;
+    await persist();
+    await refreshAfterRereadChange(bookId);
+  }
+
+  async function undoRereadFor(bookId) {
+    if (!bookId || !store.undoReread(ctx.library, bookId)) return;
+    await persist();
+    await refreshAfterRereadChange(bookId);
+  }
+
+  logRereadBtn.addEventListener("click", () => startRereadFor(logModalBookId));
+  logRereadUndoBtn.addEventListener("click", () => undoRereadFor(logModalBookId));
+  bookRereadBtn.addEventListener("click", () => startRereadFor(editingBookId));
+  bookRereadUndoBtn.addEventListener("click", () => undoRereadFor(editingBookId));
 
   // ---- wishlist: small "corner" panel for books not owned/tracked yet ----
 
@@ -1439,10 +1531,15 @@
       bookModalTitle.textContent = editingBookId ? t("library.modalTitleEdit") : t("library.modalTitleAdd");
       bookModalSubmit.textContent = editingBookId ? t("library.submitEdit") : t("library.submitAdd");
       renderCategoryChecklist(selectedCategoryIds());
+      const editing = editingBookId ? store.getBookById(ctx.library, editingBookId) : null;
+      if (editing) renderBookRereadField(editing);
     }
     if (isOverlayOpen(logModalOverlay) && logModalBookId) {
       const book = store.getBookById(ctx.library, logModalBookId);
-      if (book) applyRemainingPagesState(book);
+      if (book) {
+        applyRemainingPagesState(book);
+        renderLogModalBookInfo(book);
+      }
     }
   });
 

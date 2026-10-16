@@ -77,6 +77,15 @@
       </div>
     </section>
 
+    <section class="goal-section hidden" id="goals-section" aria-labelledby="goals-title">
+      <div class="goal-head">
+        <h2 class="section-title" id="goals-title" data-i18n="goals.sectionTitle">Goals</h2>
+        <button type="button" class="btn btn-secondary goal-edit-btn" id="goals-edit-btn">Set goals</button>
+      </div>
+      <div class="goal-grid" id="goals-grid"></div>
+      <p class="goal-empty hidden" id="goals-empty" data-i18n="goals.emptyText">Set a daily page goal or a yearly book goal and follow your progress here.</p>
+    </section>
+
     <section class="heatmap-section">
       <h2 class="section-title" data-i18n="streak.readingMap">Reading map</h2>
       <div class="heatmap-scroll">
@@ -115,6 +124,31 @@
   </main>
 </div>
 
+<div id="goals-modal-overlay" class="modal-overlay hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="goals-modal-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="goals-modal-title" data-i18n="goals.modalTitle">Reading goals</h2>
+      <button type="button" class="modal-close" id="goals-modal-close" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
+    </div>
+    <form id="goals-form" novalidate>
+      <div class="field">
+        <label for="goal-daily-input" data-i18n="goals.fieldDaily">Pages per day</label>
+        <input type="text" id="goal-daily-input" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="No goal" data-i18n-placeholder="goals.placeholder" />
+      </div>
+      <div class="field">
+        <label for="goal-yearly-input" data-i18n="goals.fieldYearly">Books per year</label>
+        <input type="text" id="goal-yearly-input" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="No goal" data-i18n-placeholder="goals.placeholder" />
+        <p class="hint" data-i18n="goals.formHint">Leave a field empty to remove that goal.</p>
+      </div>
+      <p class="error-text" id="goals-form-error" role="alert"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="goals-modal-cancel" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="goals-modal-submit" data-i18n="common.save">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="toast-container" class="toast-container"></div>
 
 <script src="js/i18n.js"></script>
@@ -123,6 +157,7 @@
 <script src="js/i18n-fr.js"></script>
 <script src="js/fs.js"></script>
 <script src="js/store.js"></script>
+<script src="js/goals.js"></script>
 <script src="js/boot.js"></script>
 <script src="js/streak.js"></script>
 </body>

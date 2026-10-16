@@ -116,6 +116,14 @@
         <label data-i18n="library.fieldYourRating">Your rating</label>
         <div class="star-picker" id="book-rating-picker"></div>
       </div>
+      <div class="field reread-field hidden" id="book-reread-field">
+        <label data-i18n="reread.fieldLabel">Rereading</label>
+        <div class="reread-actions">
+          <button type="button" class="btn btn-secondary" id="book-reread-btn" data-i18n="reread.readAgain">Read again</button>
+          <button type="button" class="btn btn-secondary" id="book-reread-undo-btn" data-i18n="reread.undo">Undo reread</button>
+        </div>
+        <p class="hint" id="book-reread-hint"></p>
+      </div>
       <p class="error-text" id="book-form-error"></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="book-modal-cancel" data-i18n="common.cancel">Cancel</button>
@@ -138,9 +146,15 @@
 
     <div class="log-modal-book" id="log-modal-book"></div>
 
-    <p class="finished-note hidden" id="log-finished-note" data-i18n="library.finishedNote">
-      This book is finished, so logging is closed unless you delete a log below.
-    </p>
+    <div class="finished-note hidden" id="log-finished-note">
+      <p class="reread-note-text" data-i18n="library.finishedNote">This book is finished, so logging is closed unless you delete a log below.</p>
+      <button type="button" class="btn btn-secondary reread-btn" id="log-reread-btn" data-i18n="reread.readAgain">Read again</button>
+    </div>
+
+    <div class="finished-note reread-note hidden" id="log-reread-note">
+      <p class="reread-note-text" id="log-reread-note-text"></p>
+      <button type="button" class="btn btn-secondary reread-btn" id="log-reread-undo-btn" data-i18n="reread.undo">Undo reread</button>
+    </div>
 
     <form id="log-form" novalidate>
       <div class="field">
@@ -183,7 +197,7 @@
       <button type="button" class="modal-close" id="rate-modal-close" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
     </div>
     <div class="log-modal-book" id="rate-modal-book"></div>
-    <p class="hint" style="margin-bottom: 14px;" data-i18n="library.rateModalQuestion">How would you rate it?</p>
+    <p class="hint" id="rate-modal-question" style="margin-bottom: 14px;" data-i18n="library.rateModalQuestion">How would you rate it?</p>
     <div class="star-picker" id="rate-modal-picker"></div>
     <div class="modal-actions">
       <button type="button" class="btn btn-secondary" id="rate-modal-skip" data-i18n="library.rateModalSkip">Maybe later</button>

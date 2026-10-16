@@ -281,6 +281,46 @@ RI.fs = (function () {
     await writable.close();
   }
 
+  const GOALS_FILE = "goals.json";
+
+  function goalOrNull(value) {
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  }
+
+  // goals.json: { dailyPages, yearlyBooks, updatedAt }. A missing or empty
+  // file means no goals; values are validated later by RI.goals.normalizeGoals.
+  async function readGoals(dataHandle) {
+    const empty = { dailyPages: null, yearlyBooks: null, updatedAt: null };
+    let fileHandle;
+    try {
+      fileHandle = await dataHandle.getFileHandle(GOALS_FILE, { create: false });
+    } catch (err) {
+      if (err && err.name === "NotFoundError") return empty;
+      throw err;
+    }
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    if (!text.trim()) return empty;
+    const parsed = JSON.parse(text);
+    return {
+      dailyPages: goalOrNull(parsed.dailyPages),
+      yearlyBooks: goalOrNull(parsed.yearlyBooks),
+      updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : null,
+    };
+  }
+
+  async function writeGoals(dataHandle, goalsData) {
+    const fileHandle = await dataHandle.getFileHandle(GOALS_FILE, { create: true });
+    const writable = await fileHandle.createWritable();
+    const toWrite = {
+      dailyPages: goalsData.dailyPages,
+      yearlyBooks: goalsData.yearlyBooks,
+      updatedAt: goalsData.updatedAt,
+    };
+    await writable.write(JSON.stringify(toWrite, null, 2));
+    await writable.close();
+  }
+
   // one-off exports go through the native Save As dialog rather than the
   // app's own data/ folder handle; this is the user picking a destination
   // outside readin's own storage, not a readin-managed file
@@ -361,6 +401,8 @@ RI.fs = (function () {
     writeRatings,
     readWishlist,
     writeWishlist,
+    readGoals,
+    writeGoals,
     saveCsvAs,
     saveCover,
     deleteCover,

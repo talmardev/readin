@@ -63,6 +63,7 @@
   const rateModalPicker = document.getElementById("rate-modal-picker");
   const rateModalClose = document.getElementById("rate-modal-close");
   const rateModalSkip = document.getElementById("rate-modal-skip");
+  const rateModalQuestion = document.getElementById("rate-modal-question");
   let rateModalBookId = null;
   let pendingSavedSummary = null;
 
@@ -214,6 +215,8 @@
     } else {
       parts.push(t("read.finishedTag"));
     }
+    const readNumber = store.readCountForBook(ctx.library, book.id);
+    if (readNumber > 1 && tierKey !== "finished") parts.push(t("reread.readNumber", { n: readNumber }));
     return parts.join(" · ");
   }
 
@@ -640,7 +643,15 @@
     if (!book) return;
     rateModalBookId = bookId;
     await renderBookSummary(rateModalBookEl, book);
-    rateModalStarPicker.setValue(0);
+    // after a reread the previous rating is prefilled and the wording asks to
+    // confirm or change it; data-i18n is swapped so a language switch keeps it
+    const rating = store.getRating(ctx.ratingsData, bookId);
+    const previous = rating && rating.stars ? rating.stars : 0;
+    rateModalQuestion.setAttribute("data-i18n", previous ? "reread.rateQuestionAgain" : "library.rateModalQuestion");
+    rateModalQuestion.textContent = t(previous ? "reread.rateQuestionAgain" : "library.rateModalQuestion");
+    rateModalSkip.setAttribute("data-i18n", previous ? "reread.rateKeep" : "library.rateModalSkip");
+    rateModalSkip.textContent = t(previous ? "reread.rateKeep" : "library.rateModalSkip");
+    rateModalStarPicker.setValue(previous);
     rateModalOverlay.classList.remove("hidden");
   }
 
@@ -725,16 +736,12 @@
 
       // this log just finished the book (remaining was checked >0 above):
       // offer the rating modal before showing the plain "saved" screen
-      const justFinished = store.isBookFinished(ctx.library, store.getBookById(ctx.library, bookId));
-      if (justFinished) {
-        const rating = store.getRating(ctx.ratingsData, bookId);
-        if (!rating || !rating.stars) {
-          store.markRatingNudged(ctx.ratingsData, bookId, store.todayISODate());
-          await persistRatings();
-          pendingSavedSummary = summary;
-          await openRateModal(bookId);
-          return;
-        }
+      if (store.shouldPromptRating(ctx.library, ctx.ratingsData, bookId)) {
+        store.markRatingNudged(ctx.ratingsData, bookId, store.todayISODate());
+        await persistRatings();
+        pendingSavedSummary = summary;
+        await openRateModal(bookId);
+        return;
       }
 
       savedSummaryEl.textContent = summary;

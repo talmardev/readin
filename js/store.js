@@ -88,6 +88,18 @@ RI.store = (function () {
     return value === "owned" || value === "library" ? value : null;
   }
 
+  // read-through a book is on; a missing or invalid value means the first
+  function currentCycle(book) {
+    const n = Math.floor(Number(book && book.readCount));
+    return n >= 1 ? n : 1;
+  }
+
+  // logs saved before rereads existed carry no cycle and belong to read 1
+  function logCycle(log) {
+    const n = Math.floor(Number(log && log.cycle));
+    return n >= 1 ? n : 1;
+  }
+
   function createBook(library, { title, author, totalPages, coverFile, ownership, isbn, categoryIds }) {
     const book = {
       id: generateId(),
@@ -98,6 +110,7 @@ RI.store = (function () {
       ownership: normalizeOwnership(ownership),
       isbn: (isbn || "").trim() || null,
       categoryIds: Array.isArray(categoryIds) ? categoryIds.slice() : [],
+      readCount: 1,
       createdAt: new Date().toISOString(),
     };
     library.books.push(book);
@@ -114,6 +127,7 @@ RI.store = (function () {
       ownership: normalizeOwnership(b.ownership),
       isbn: b.isbn || null,
       categoryIds: Array.isArray(b.categoryIds) ? b.categoryIds : [],
+      readCount: currentCycle(b),
       createdAt: b.createdAt,
     };
   }
@@ -224,6 +238,7 @@ RI.store = (function () {
       pagesRead: Math.max(0, Math.round(Number(pagesRead) || 0)),
       date: isPastRead ? null : date || todayISODate(),
       isPastRead: !!isPastRead,
+      cycle: currentCycle(getBookById(library, bookId)),
       createdAt: new Date().toISOString(),
     };
     library.logs.push(log);
@@ -237,12 +252,19 @@ RI.store = (function () {
     return removed;
   }
 
+  // full history across every read-through
   function logsForBook(library, bookId) {
     return library.logs.filter((l) => l.bookId === bookId);
   }
 
+  // only the read-through in progress; this drives progress and the 100% cap
+  function logsForCurrentCycle(library, bookId) {
+    const cycle = currentCycle(getBookById(library, bookId));
+    return logsForBook(library, bookId).filter((l) => logCycle(l) === cycle);
+  }
+
   function pagesReadForBook(library, bookId) {
-    return logsForBook(library, bookId).reduce((sum, l) => sum + (Number(l.pagesRead) || 0), 0);
+    return logsForCurrentCycle(library, bookId).reduce((sum, l) => sum + (Number(l.pagesRead) || 0), 0);
   }
 
   function progressForBook(library, book) {
@@ -356,28 +378,106 @@ RI.store = (function () {
     return remainingPages(library, book) <= 0 && progressForBook(library, book).pagesRead > 0;
   }
 
-  function booksReadCount(library) {
-    return library.books.filter((b) => isBookFinished(library, b)).length;
+  // one entry per (book, cycle) that has at least one log, books in shelf
+  // array order and cycles ascending
+  function readCycles(library) {
+    const byBook = new Map();
+    for (const log of library.logs) {
+      let cycles = byBook.get(log.bookId);
+      if (!cycles) {
+        cycles = new Map();
+        byBook.set(log.bookId, cycles);
+      }
+      const cycle = logCycle(log);
+      let entry = cycles.get(cycle);
+      if (!entry) {
+        entry = { pages: 0, dates: [] };
+        cycles.set(cycle, entry);
+      }
+      entry.pages += Number(log.pagesRead) || 0;
+      if (!log.isPastRead && log.date) entry.dates.push(log.date);
+    }
+    const out = [];
+    library.books.forEach((book) => {
+      const cycles = byBook.get(book.id);
+      if (!cycles) return;
+      const total = Math.max(1, book.totalPages || 1);
+      Array.from(cycles.keys())
+        .sort((a, b) => a - b)
+        .forEach((cycle) => {
+          const entry = cycles.get(cycle);
+          out.push({ bookId: book.id, cycle, complete: entry.pages >= total, dates: entry.dates });
+        });
+    });
+    return out;
   }
 
-  // days from a finished book's first dated log to its last; past-read logs
-  // (no date) can't anchor a span, so books finished only via past reads are
-  // excluded rather than counted as "0 days"
+  // one entry per finished read-through. finishedDate is the latest dated
+  // log of that cycle, or null when it only has past-read logs.
+  function completedReads(library) {
+    return readCycles(library)
+      .filter((c) => c.complete)
+      .map((c) => ({
+        bookId: c.bookId,
+        cycle: c.cycle,
+        finishedDate: c.dates.length > 0 ? c.dates.reduce((a, d) => (d > a ? d : a)) : null,
+      }));
+  }
+
+  // every finished read-through counts, so rereading a book adds to the total
+  function booksReadCount(library) {
+    return completedReads(library).length;
+  }
+
+  // days from a finished read-through's first dated log to its last; past-read
+  // logs (no date) can't anchor a span, so reads finished only via past reads
+  // are excluded rather than counted as "0 days"
   function averageDaysToComplete(library) {
     const spans = [];
-    library.books.forEach((book) => {
-      if (!isBookFinished(library, book)) return;
-      const dates = logsForBook(library, book.id)
-        .filter((l) => !l.isPastRead && l.date)
-        .map((l) => l.date);
-      if (dates.length === 0) return;
-      const min = dates.reduce((a, c) => (c < a ? c : a));
-      const max = dates.reduce((a, c) => (c > a ? c : a));
-      const days = Math.round((parseISODate(max) - parseISODate(min)) / 86400000) + 1;
-      spans.push(days);
+    readCycles(library).forEach((c) => {
+      if (!c.complete || c.dates.length === 0) return;
+      const min = c.dates.reduce((a, d) => (d < a ? d : a));
+      const max = c.dates.reduce((a, d) => (d > a ? d : a));
+      spans.push(Math.round((parseISODate(max) - parseISODate(min)) / 86400000) + 1);
     });
     if (spans.length === 0) return null;
     return spans.reduce((a, c) => a + c, 0) / spans.length;
+  }
+
+  // read-through number a book is on (1 for a first read)
+  function readCountForBook(library, bookId) {
+    return currentCycle(getBookById(library, bookId));
+  }
+
+  // starts the next read-through at 0%; only allowed once the current one is
+  // finished. Earlier logs stay untouched and keep their cycle.
+  function startReread(library, bookId) {
+    const book = getBookById(library, bookId);
+    if (!book || !isBookFinished(library, book)) return null;
+    book.readCount = currentCycle(book) + 1;
+    return book;
+  }
+
+  // a reread can be dropped only while it has no logs of its own
+  function canUndoReread(library, bookId) {
+    const book = getBookById(library, bookId);
+    return !!book && currentCycle(book) > 1 && logsForCurrentCycle(library, bookId).length === 0;
+  }
+
+  function undoReread(library, bookId) {
+    if (!canUndoReread(library, bookId)) return null;
+    const book = getBookById(library, bookId);
+    book.readCount = currentCycle(book) - 1;
+    return book;
+  }
+
+  // whether the "You finished it!" modal should open after a log: always for
+  // an unrated book, and after any reread so the earlier rating is confirmed
+  function shouldPromptRating(library, ratingsData, bookId) {
+    const book = getBookById(library, bookId);
+    if (!book || !isBookFinished(library, book)) return false;
+    const rating = getRating(ratingsData, bookId);
+    return !rating || !rating.stars || currentCycle(book) > 1;
   }
 
   // mean pages logged on days that had at least one dated log (not a
@@ -490,7 +590,10 @@ RI.store = (function () {
       "ISBN",
       "Categories",
       "Date Added",
+      "Times Read",
     ];
+    const timesRead = new Map();
+    completedReads(library).forEach((r) => timesRead.set(r.bookId, (timesRead.get(r.bookId) || 0) + 1));
     const rows = sortedBooksForLibrary(library).map((book) => {
       const progress = progressForBook(library, book);
       const rating = getRating(ratingsData, book.id);
@@ -508,6 +611,7 @@ RI.store = (function () {
         book.isbn || "",
         categories,
         book.createdAt ? book.createdAt.slice(0, 10) : "",
+        timesRead.get(book.id) || 0,
       ];
     });
     return [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n") + "\r\n";
@@ -592,6 +696,15 @@ RI.store = (function () {
     addLog,
     deleteLog,
     logsForBook,
+    logsForCurrentCycle,
+    logCycle,
+
+    readCountForBook,
+    startReread,
+    undoReread,
+    canUndoReread,
+    completedReads,
+    shouldPromptRating,
 
     pagesReadForBook,
     progressForBook,
