@@ -8,7 +8,7 @@ RI.i18n = (function () {
   const STORAGE_KEY = "readin-lang";
   const DEFAULT_LANG = "pt";
   const FALLBACK_LANG = "en";
-  const LOCALE_TAGS = { en: "en-US", pt: "pt-PT", fr: "fr-FR" };
+  const LOCALE_TAGS = { en: "en-US", pt: "pt-PT", fr: "fr-FR", es: "es-ES" };
 
   const languages = {}; // code -> { meta: {label, flagPath, flagEmoji}, dict }
   const changeListeners = [];
