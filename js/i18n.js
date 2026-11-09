@@ -8,7 +8,7 @@ RI.i18n = (function () {
   const STORAGE_KEY = "readin-lang";
   const DEFAULT_LANG = "pt";
   const FALLBACK_LANG = "en";
-  const LOCALE_TAGS = { en: "en-US", pt: "pt-PT", fr: "fr-FR", es: "es-ES", de: "de-DE" };
+  const LOCALE_TAGS = { en: "en-US", pt: "pt-PT", fr: "fr-FR", es: "es-ES", de: "de-DE", zh: "zh-CN" };
 
   const languages = {}; // code -> { meta: {label, flagPath, flagEmoji}, dict }
   const changeListeners = [];
@@ -169,8 +169,20 @@ RI.i18n = (function () {
   // .header-right and/or .setup-card, whichever exist in the current page's
   // DOM) so pages never need switcher markup of their own. ----
 
+  // Menu order: the active language first, then English and Portuguese, then
+  // the rest alphabetically by label.
+  const PINNED_LANGS = ["en", "pt"];
+
   function languageCodesSorted() {
-    return Object.keys(languages).sort();
+    const active = currentLang();
+    const all = Object.keys(languages);
+    const label = (code) => (languages[code].meta && languages[code].meta.label) || code;
+    const head = [active].concat(PINNED_LANGS.filter((code) => code !== active));
+    const pinned = head.filter((code) => languages[code]);
+    const rest = all
+      .filter((code) => !pinned.includes(code))
+      .sort((a, b) => label(a).localeCompare(label(b)));
+    return pinned.concat(rest);
   }
 
   // Tries meta.flagPath (by convention a .png) first, then the same path
