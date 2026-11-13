@@ -1,8 +1,6 @@
 window.RI = window.RI || {};
 
-// Open Library client: query parsing, search, suggestions and cover
-// download. No DOM. Classic script, not a module (file:// blocks ES module
-// fetches).
+// Open Library client, classic script, no DOM
 
 RI.openlibrary = (function () {
   "use strict";
@@ -10,20 +8,68 @@ RI.openlibrary = (function () {
   const SITE_URL = "https://openlibrary.org";
   const SEARCH_URL = SITE_URL + "/search.json";
   const COVER_URL = "https://covers.openlibrary.org/b/id/";
+  const TRENDING_URL = SITE_URL + "/trending/monthly.json";
   const MIN_QUERY_LENGTH = 3;
   const FETCH_LIMIT = 12;
   const RESULT_LIMIT = 8;
-  const TRENDING_URL = SITE_URL + "/trending/monthly.json";
   const SUGGESTION_COUNT = 10;
-  const SUGGESTION_AUTHORS = 3;
-  const WORKS_PER_AUTHOR = 5;
+  const SUGGESTION_GENRES = 3;
+  const GENRE_PAGE_SIZE = 12;
+  const MAX_GENRE_PAGES = 3;
   const TRENDING_LIMIT = 30;
   const SEARCH_TIMEOUT_MS = 8000;
   const COVER_TIMEOUT_MS = 15000;
-  // anything smaller than this is a placeholder, not a real cover
+  // placeholder covers are smaller than this
   const MIN_COVER_BYTES = 1024;
 
-  // work-level fields plus the edition that best matches the query
+  // the only genre keywords ever sent
+  const GENRE_SUBJECTS = {
+    "nf-finance-investing": "finance",
+    "nf-business": "business",
+    "nf-economics": "economics",
+    "nf-self-help": "self-help",
+    "nf-productivity": "time management",
+    "nf-psychology": "psychology",
+    "nf-philosophy": "philosophy",
+    "nf-history": "world history",
+    "nf-biography-memoir": "biography",
+    "nf-politics": "political science",
+    "nf-science": "popular science",
+    "nf-technology": "technology",
+    "nf-health-wellness": "health",
+    "nf-parenting-family": "parenting",
+    "nf-travel": "travel",
+    "nf-true-crime": "true crime",
+    "nf-religion-spirituality": "religion",
+    "nf-sociology": "sociology",
+    "nf-nature-environment": "nature",
+    "nf-art-design": "art",
+    "nf-cooking-food": "cooking",
+    "nf-sports": "athletes",
+    "nf-essays-journalism": "essays",
+    "nf-law": "constitutional law",
+    "nf-education": "learning",
+    "nf-reference": "reference",
+    "fic-literary-fiction": "literary fiction",
+    "fic-fantasy": "fantasy",
+    "fic-science-fiction": "science fiction",
+    "fic-mystery": "mystery",
+    "fic-thriller": "thriller",
+    "fic-horror": "horror",
+    "fic-romance": "romance",
+    "fic-historical-fiction": "historical fiction",
+    "fic-crime": "crime",
+    "fic-classics": "classics",
+    "fic-young-adult": "young adult",
+    "fic-short-stories": "short stories",
+    "fic-poetry": "poetry",
+    "fic-graphic-novels-comics": "graphic novels",
+    "fic-adventure": "adventure",
+    "fic-dystopian": "dystopia",
+    "fic-satire": "satire",
+  };
+
+  // work fields plus the best edition
   const SEARCH_FIELDS = [
     "key",
     "title",
@@ -65,11 +111,7 @@ RI.openlibrary = (function () {
     return sum % 10 === 0;
   }
 
-  // Returns { kind, value }:
-  //   empty        nothing typed
-  //   isbn         a valid ISBN-10/13, value is the compact form
-  //   invalidIsbn  shaped like an ISBN but the checksum fails
-  //   text         anything else, value is the trimmed text
+  // kinds: empty, isbn, invalidIsbn, text
   function classifyQuery(raw) {
     const text = String(raw || "").trim().replace(/\s+/g, " ");
     if (!text) return { kind: "empty", value: "" };
@@ -81,7 +123,7 @@ RI.openlibrary = (function () {
     return { kind: "text", value: text };
   }
 
-  // params: plain object of search.json parameters (q, author, limit, ...)
+  // params are plain search.json parameters
   function buildSearchUrl(params, lang) {
     const query = new URLSearchParams();
     Object.keys(params).forEach((name) => query.set(name, params[name]));
@@ -101,9 +143,7 @@ RI.openlibrary = (function () {
     });
   }
 
-  // Runs fetch with a timeout and an optional outside abort signal, and maps
-  // every failure to an Error carrying a code: offline, timeout, abort, http,
-  // network.
+  // fetch with timeout, errors carry a code
   async function request(url, { signal, timeoutMs, read }) {
     if (typeof navigator !== "undefined" && navigator.onLine === false) throw makeError("offline");
     const controller = new AbortController();
@@ -141,7 +181,7 @@ RI.openlibrary = (function () {
     return Number.isFinite(n) && n >= 1 ? n : null;
   }
 
-  // prefers the ISBN the user typed, then an ISBN-13, then whatever is there
+  // typed ISBN first, then ISBN-13
   function pickIsbn(list, typed) {
     if (typed) return typed;
     if (!Array.isArray(list) || list.length === 0) return "";
@@ -149,8 +189,7 @@ RI.openlibrary = (function () {
     return isbn13 || list[0];
   }
 
-  // Edition-level data (title, cover, ISBN, pages) is preferred because it
-  // describes one real book; the work-level values are the fallback.
+  // edition data wins over work data
   function normalizeDoc(doc, typedIsbn) {
     if (!doc) return null;
     const edition = doc.editions && Array.isArray(doc.editions.docs) ? doc.editions.docs[0] : null;
@@ -160,7 +199,7 @@ RI.openlibrary = (function () {
     return {
       workKey: doc.key || "",
       title,
-      // the work's own title, which can differ from the edition title above
+      // the work's own title
       workTitle: cleanText(doc.title, 200),
       author: cleanText(authors.join(", "), 200),
       year: positiveInt(doc.first_publish_year),
@@ -170,8 +209,7 @@ RI.openlibrary = (function () {
     };
   }
 
-  // drops repeated work records and moves bare records (no author, no cover)
-  // behind the complete ones, keeping Open Library's relevance order otherwise
+  // drops repeats, bare records go last
   function tidyResults(results) {
     const seen = new Set();
     const unique = results.filter((r) => {
@@ -185,7 +223,7 @@ RI.openlibrary = (function () {
     return complete.concat(bare).slice(0, RESULT_LIMIT);
   }
 
-  // query comes from classifyQuery; kind must be "isbn" or "text"
+  // query comes from classifyQuery
   async function search(query, { signal, lang } = {}) {
     if (!query || (query.kind !== "isbn" && query.kind !== "text")) return [];
     const typedIsbn = query.kind === "isbn" ? query.value : "";
@@ -205,15 +243,14 @@ RI.openlibrary = (function () {
     return copy;
   }
 
-  // The best known works of one author, cover required
-  async function authorWorks(name, lang) {
-    const docs = await fetchDocs({ author: name, limit: String(FETCH_LIMIT) }, { lang });
-    const results = docs.map((d) => normalizeDoc(d, "")).filter((r) => r && r.coverId);
-    return tidyResults(results).slice(0, WORKS_PER_AUTHOR);
+  // one page of works for a subject
+  async function genrePage(term, page, lang) {
+    const params = { subject: term, limit: String(GENRE_PAGE_SIZE), offset: String(page * GENRE_PAGE_SIZE) };
+    const docs = await fetchDocs(params, { lang });
+    return docs.map((d) => normalizeDoc(d, "")).filter((r) => r && r.coverId);
   }
 
-  // Trending works carry no page count or ISBN, so they are looked up again
-  // by key in a single query that does. Falls back to the bare trending data.
+  // trending lacks pages, so look up keys
   async function trendingWorks(lang) {
     const works = await request(TRENDING_URL + "?limit=" + TRENDING_LIMIT, {
       timeoutMs: SEARCH_TIMEOUT_MS,
@@ -238,7 +275,7 @@ RI.openlibrary = (function () {
       .filter((r) => r && r.coverId);
   }
 
-  // one request set per page load: later calls reuse the same promise
+  // one request per key and page load
   const poolCache = new Map();
 
   function cachedOnce(key, load) {
@@ -252,22 +289,68 @@ RI.openlibrary = (function () {
     return poolCache.get(key);
   }
 
-  // Book suggestions for the Add Book modal: other works by the given
-  // authors first, then trending books to fill the rest. isOwned(result)
-  // drops what the library already has. The pools are cached, the pick from
-  // them is reshuffled on every call.
-  async function suggestions({ authors, isOwned, lang, count } = {}) {
+  // random genres, weighted by book count
+  function chooseGenres(genres) {
+    const pool = (genres || [])
+      .filter((g) => g && GENRE_SUBJECTS[g.id])
+      .map((g) => ({ term: GENRE_SUBJECTS[g.id], weight: Math.max(1, Number(g.weight) || 1) }));
+    const chosen = [];
+    while (chosen.length < SUGGESTION_GENRES && pool.length > 0) {
+      const total = pool.reduce((sum, g) => sum + g.weight, 0);
+      let roll = Math.random() * total;
+      let idx = 0;
+      while (idx < pool.length - 1 && roll >= pool[idx].weight) {
+        roll -= pool[idx].weight;
+        idx += 1;
+      }
+      chosen.push(pool.splice(idx, 1)[0].term);
+    }
+    return chosen;
+  }
+
+  // round robin, skipping owned and repeats
+  function pickFromPools(pools, owned, wanted) {
+    const queues = pools.map((pool) => shuffle(pool.filter((r) => !owned(r))));
+    const taken = new Set();
+    const picks = [];
+    let progressed = true;
+    while (picks.length < wanted && progressed) {
+      progressed = false;
+      for (const queue of queues) {
+        while (queue.length > 0 && picks.length < wanted) {
+          const next = queue.shift();
+          if (taken.has(next.workKey)) continue;
+          taken.add(next.workKey);
+          picks.push(next);
+          progressed = true;
+          break;
+        }
+      }
+    }
+    return picks;
+  }
+
+  // only genre keywords leave, owned dropped locally
+  async function suggestions({ genres, isOwned, lang, count } = {}) {
     const wanted = count || SUGGESTION_COUNT;
     const owned = typeof isOwned === "function" ? isOwned : () => false;
-    const names = (authors || []).slice(0, SUGGESTION_AUTHORS);
+    const terms = chooseGenres(genres);
     let picks = [];
-    if (names.length > 0) {
-      const personal = await cachedOnce("authors:" + lang + ":" + names.join("|"), async () => {
-        const lists = await Promise.all(names.map((name) => authorWorks(name, lang).catch(() => [])));
-        return [].concat(...lists);
-      });
-      picks = shuffle(personal.filter((r) => !owned(r))).slice(0, wanted);
+    if (terms.length > 0) {
+      const pools = terms.map(() => []);
+      // next pages fill the owned gaps
+      for (let page = 0; page < MAX_GENRE_PAGES && picks.length < wanted; page += 1) {
+        const lists = await Promise.all(
+          terms.map((term) => cachedOnce("genre:" + lang + ":" + term + ":" + page, () => genrePage(term, page, lang)).catch(() => []))
+        );
+        lists.forEach((list, i) => {
+          pools[i] = pools[i].concat(list);
+        });
+        picks = pickFromPools(pools, owned, wanted);
+        if (lists.every((list) => list.length === 0)) break;
+      }
     }
+    // trending fills what is still missing
     if (picks.length < wanted) {
       let trending = [];
       try {
@@ -282,16 +365,14 @@ RI.openlibrary = (function () {
     return picks;
   }
 
-  // size: S for the result list, M for the suggestion covers
+  // S for lists, M for suggestions
   function thumbUrl(coverId, size) {
     return COVER_URL + coverId + "-" + (size || "S") + ".jpg?default=false";
   }
 
   const EXTENSIONS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
 
-  // Downloads the large cover as a File, so it goes through the same
-  // fs.saveCover path as an uploaded one. default=false makes a missing
-  // cover a 404 instead of a blank 1x1 image.
+  // downloads a File, missing covers 404
   async function fetchCover(coverId, { signal } = {}) {
     if (!coverId) throw makeError("nocover");
     let blob;

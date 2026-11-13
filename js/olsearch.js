@@ -1,8 +1,6 @@
 window.RI = window.RI || {};
 
-// Open Library search box shared by the Add Book modal and the wishlist
-// panel. Mount it in an empty container that sits outside any <form>, so
-// Enter in the box never submits the form below it.
+// search widget, mount it outside any form
 
 RI.olsearch = (function () {
   "use strict";
@@ -15,11 +13,7 @@ RI.olsearch = (function () {
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.6-4.6"/></svg>';
   let instanceCount = 0;
 
-  // options.onPick(result): fill the caller's text fields right away
-  // options.onCover(file, result): the downloaded cover arrived
-  // options.needsPages: warn when the picked result has no page count
-  // options.loadSuggestions(): optional, returns a promise of results shown
-  // as a cover grid while the box is empty, after showSuggestions() is called
+  // options: onPick, onCover, needsPages, loadSuggestions
   function mount(container, options) {
     const opts = options || {};
     const needsPages = opts.needsPages !== false;
@@ -92,15 +86,14 @@ RI.olsearch = (function () {
     let pickCtrl = null;
     let pickPromise = Promise.resolve();
     let coverLoading = false;
-    // status key of the last pick, kept so a cancelled cover download can
-    // fall back to it
+    // last pick status, for cancelled covers
     let pickBase = null;
     let currentResults = [];
     let suggestions = [];
     let suggestActive = false;
     let suggestLoading = false;
     let suggestSeq = 0;
-    // status is kept as translation keys so a language switch can redraw it
+    // status keys survive language switches
     let statusKeys = null;
     let statusKind = "info";
 
@@ -171,7 +164,7 @@ RI.olsearch = (function () {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "ol-suggest-item";
-      // the title is clamped to two lines, so the full text goes in a tooltip
+      // tooltip shows the clamped title
       btn.title = result.author ? result.title + " · " + result.author : result.title;
       const cover = document.createElement("span");
       cover.className = "ol-suggest-cover";
@@ -200,7 +193,7 @@ RI.olsearch = (function () {
       return item;
     }
 
-    // shown only while the box is empty and no results are on screen
+    // only while empty with no results
     function renderSuggestions() {
       const idle = !input.value.trim() && currentResults.length === 0;
       const show = suggestActive && idle && (suggestLoading || suggestions.length > 0);
@@ -219,7 +212,7 @@ RI.olsearch = (function () {
       suggestions.forEach((result) => suggestGrid.appendChild(buildSuggestItem(result)));
     }
 
-    // loads (or reshuffles) the suggestions; a failure just hides the section
+    // failure just hides the section
     function showSuggestions() {
       if (!opts.loadSuggestions) return;
       suggestSeq += 1;
@@ -260,8 +253,7 @@ RI.olsearch = (function () {
       root.classList.remove("is-loading");
     }
 
-    // stops a cover download that is still running, e.g. when the user picks
-    // their own cover file instead
+    // stops a running cover download
     function cancelCover() {
       pickSeq += 1;
       if (pickCtrl) pickCtrl.abort();
@@ -302,7 +294,7 @@ RI.olsearch = (function () {
       }
     }
 
-    // returns true when the query is ready to be sent
+    // true when ready to send
     function checkQuery(query, explicit) {
       if (query.kind === "empty") {
         currentResults = [];
@@ -420,8 +412,7 @@ RI.olsearch = (function () {
       showSuggestions,
       cancelCover,
       focus: () => input.focus(),
-      // resolves once a cover download started by a pick has finished; it
-      // never rejects, a failed cover only changes the status line
+      // never rejects, resolves when done
       whenIdle: () => pickPromise,
     };
   }

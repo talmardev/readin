@@ -6,7 +6,7 @@
   const t = RI.i18n.t;
 
   const WEEK_COUNT = 53;
-  // must match .heatmap-cell's width + gap in css, not derived automatically
+  // must match .heatmap-cell size in css
   const CELL_STEP = 15;
 
   let ctx = null;
@@ -26,7 +26,7 @@
   const logListEmpty = document.getElementById("log-list-empty");
 
   const SVG_NS = "http://www.w3.org/2000/svg";
-  // keep in sync with the ring's viewBox and stroke width in css (.goal-ring-*)
+  // keep in sync with the ring css
   const RING_RADIUS = 34;
 
   const goalsSection = document.getElementById("goals-section");
@@ -44,7 +44,7 @@
 
   let goalsData = RI.goals.defaultGoals();
   let goalsLoaded = false;
-  // rebuilds the visible form error text so it follows language switches
+  // rebuilds the error text on language change
   let goalsFormErrorBuilder = null;
 
   function levelForPages(pages) {
@@ -229,7 +229,7 @@
 
   function percentLabel(ratio) {
     const fmt = new Intl.NumberFormat(RI.i18n.getLocale(), { style: "percent", maximumFractionDigits: 0 });
-    // floor so 99.6% never reads as 100% before the goal is actually met
+    // floor so 99.6% never shows 100%
     return fmt.format(Math.floor(ratio * 100) / 100);
   }
 
@@ -350,8 +350,7 @@
     }
   }
 
-  // goals render in isolation so a goals bug can never block the streak,
-  // heatmap or log list
+  // goals render apart from streak and heatmap
   function renderGoalsSafe() {
     try {
       renderGoals();

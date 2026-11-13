@@ -29,11 +29,9 @@
 
   let logModalBookId = null;
   let logModalCoverUrl = null;
-  // pages already logged for the book in the open log modal: the offset that
-  // converts between "pages read this session" and "stopped at page"
+  // pages already logged, the stopped-at offset
   let logModalPagesAlready = 0;
-  // which of the two log inputs the user last typed into, so an error can be
-  // phrased in their terms ("pages read" vs. "stopped at page")
+  // last edited input, for error wording
   let logLastEditedStopped = false;
 
   const grid = document.getElementById("book-grid");
@@ -120,15 +118,12 @@
   const wishlistList = document.getElementById("wishlist-list");
   const wishlistItemCoverInput = document.getElementById("wishlist-item-cover-input");
 
-  // set while the "move to library" flow has the Add Book modal open for a
-  // wishlist entry: removed from the wishlist on successful submit, left
-  // alone on cancel (see closeBookModal)
+  // wishlist entry being moved to the library
   let convertingWishlistItemId = null;
   let pendingWishlistCoverFile = null;
   let wishlistCoverPreviewUrl = null;
   let wishlistCoverUrls = new Map();
-  // which wishlist item's cover the shared #wishlist-item-cover-input is
-  // about to replace, set right before triggering its click()
+  // wishlist cover the shared input will replace
   let editingWishlistCoverItemId = null;
 
   async function persist() {
@@ -267,7 +262,7 @@
     await applyRatingNudges(allBooks, books);
   }
 
-  // ---- ratings: nudge popups + star pickers ----
+  // Ratings: nudge popups and star pickers
 
   function removeNudge(bookId) {
     const entry = activeNudges.get(bookId);
@@ -281,9 +276,7 @@
     Array.from(activeNudges.keys()).forEach(removeNudge);
   }
 
-  // one non-interactive two-layer star glyph (muted background + green
-  // foreground, foreground clipped to a 0/50/100% width), used for the
-  // read-only card display
+  // read-only star glyph for cards
   function buildStarGlyph() {
     const cell = document.createElement("span");
     cell.className = "star-cell";
@@ -309,12 +302,7 @@
     return row;
   }
 
-  // one interactive star position: a visual glyph (bg + fg, same as
-  // buildStarGlyph) plus two invisible half-width buttons stacked on top.
-  // Clicking is a real DOM element hit (dedicated "set to X.5" / "set to X"
-  // buttons), not pixel-position math against getBoundingClientRect, so it's
-  // reliable regardless of zoom/DPI/click precision. This also makes every
-  // half-star reachable by keyboard/Tab, unlike a single click-split button.
+  // Star slot: glyph plus two half buttons
   function buildStarSlot(index, onPick, onPreview) {
     const slot = document.createElement("span");
     slot.className = "star-slot";
@@ -341,11 +329,7 @@
     return { slot, fg };
   }
 
-  // interactive 1-5 star picker in 0.5 increments. Populates `container`
-  // (an existing .star-picker element) and returns a controller so the same
-  // DOM/listeners can be reused across modal opens instead of rebuilding.
-  // setValue() resets the displayed rating, setOnPick() rebinds which book
-  // a click should save to.
+  // star picker in half steps, reusable
   function buildStarPicker(container) {
     container.innerHTML = "";
     let current = 0;
@@ -432,9 +416,7 @@
     scheduleDismiss();
   }
 
-  // finished books always get a ratings.json row (even unrated); the shelf
-  // nudge only fires once per calendar day per book, and only for cards
-  // actually on screen right now
+  // nudge once a day, only visible cards
   async function applyRatingNudges(allBooksList, renderedBooks) {
     let ratingsChanged = false;
     allBooksList.forEach((book) => {
@@ -461,8 +443,7 @@
     });
   }
 
-  // "Read 3 times" once the latest read-through is finished, "Read #2" while
-  // it is still in progress
+  // label depends on the read-through state
   function rereadTagText(book) {
     const n = store.readCountForBook(ctx.library, book.id);
     return store.isBookFinished(ctx.library, book)
@@ -595,7 +576,7 @@
     return card;
   }
 
-  // short delay tells a single click apart from a double click's first half
+  // delay separates single from double click
   function attachCardInteractions(card, bookId) {
     let clickTimer = null;
 
@@ -679,9 +660,7 @@
     info.appendChild(title);
     rateModalBookEl.appendChild(info);
 
-    // after a reread the previous rating is prefilled and the wording asks
-    // to confirm or change it; data-i18n is swapped so a language switch
-    // keeps the right text
+    // after a reread, prefill the old rating
     const rating = store.getRating(ctx.ratingsData, bookId);
     const previous = rating && rating.stars ? rating.stars : 0;
     rateModalQuestion.setAttribute("data-i18n", previous ? "reread.rateQuestionAgain" : "library.rateModalQuestion");
@@ -719,8 +698,7 @@
     store.setRating(ctx.ratingsData, editingBookId, value);
     await persistRatings();
     bookRatingStarPicker.setValue(value);
-    // the modal stays open, but refresh the card underneath so its star row
-    // isn't stale if the user closes without hitting "Save changes"
+    // refresh the card under the open modal
     await renderGrid();
   });
 
@@ -832,8 +810,7 @@
     }
   }
 
-  // edit modal: "Read again" for a finished book, "Undo reread" while a
-  // fresh reread has no logs yet, nothing otherwise
+  // Read again, undo reread, or nothing
   function renderBookRereadField(book) {
     const finished = store.isBookFinished(ctx.library, book);
     const canUndo = store.canUndoReread(ctx.library, book.id);
@@ -926,15 +903,13 @@
     setCoverPreview(null);
   });
 
-  // Open Library search above the Add Book form: a picked result fills the
-  // form fields, and its cover becomes the pending cover file
+  // picked results fill the form
   const bookModal = document.getElementById("book-modal");
   const olBookBlock = document.getElementById("ol-book-block");
-  // the two-column Add Book layout (and its suggestions) is desktop only
+  // wide layout and suggestions are desktop only
   const wideModalQuery = window.matchMedia("(min-width: 900px)");
 
-  // lowercase, accent-free text for comparing titles; falls back to the raw
-  // lowercase text for scripts the pattern would strip entirely
+  // accent-free lowercase key for titles
   function matchKey(text) {
     const plain = String(text || "")
       .toLowerCase()
@@ -945,34 +920,25 @@
     return plain || String(text || "").trim().toLowerCase();
   }
 
-  // first author name of each book, most recently added book first
-  function libraryAuthorNames() {
-    const seen = new Set();
-    const names = [];
-    ctx.library.books
-      .slice()
-      .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
-      .forEach((book) => {
-        const first = String(book.author || "").split(/,|;|&| and /i)[0].trim();
-        if (first && !seen.has(first.toLowerCase())) {
-          seen.add(first.toLowerCase());
-          names.push(first);
-        }
-      });
-    return names;
+  // category ids with their book counts
+  function libraryGenres() {
+    const counts = new Map();
+    ctx.library.books.forEach((book) => {
+      (book.categoryIds || []).forEach((id) => counts.set(id, (counts.get(id) || 0) + 1));
+    });
+    return Array.from(counts, ([id, weight]) => ({ id, weight }));
   }
 
-  // other books by the authors already on the shelf, topped up with trending
-  // ones, never a book that is already in the library
+  // only genres are sent, owned books dropped here
   function loadBookSuggestions() {
     const titles = new Set();
     const isbns = new Set();
     ctx.library.books.forEach((book) => {
       titles.add(matchKey(book.title));
-      if (book.isbn) isbns.add(String(book.isbn).replace(/[\s-]/g, ""));
+      if (book.isbn) isbns.add(String(book.isbn).replace(/[s-]/g, ""));
     });
     return RI.openlibrary.suggestions({
-      authors: libraryAuthorNames(),
+      genres: libraryGenres(),
       lang: RI.i18n.getLanguage(),
       isOwned: (result) =>
         titles.has(matchKey(result.title)) ||
@@ -1024,7 +990,7 @@
     bookModalSubmit.disabled = true;
 
     try {
-      // a cover still downloading from Open Library must land first
+      // wait for a cover still downloading
       await olBookSearch.whenIdle();
       if (editingBookId) {
         const book = store.getBookById(ctx.library, editingBookId);
@@ -1181,7 +1147,7 @@
     });
   }
 
-  // toggles the log form vs. the "finished" note based on pages left to read
+  // log form or finished note, by pages left
   function applyRemainingPagesState(book) {
     const progress = store.progressForBook(ctx.library, book);
     logModalPagesAlready = progress.pagesRead;
@@ -1197,18 +1163,14 @@
     if (!finished) {
       logPagesInput.max = remaining;
       logPagesHint.textContent = t("library.pagesReadHintWithRemaining", { count: remaining, n: remaining });
-      // "stopped at page" is the same log expressed as an absolute page: it can
-      // land anywhere past what's already been read, up to the last page
+      // stopped-at can be any page ahead
       logStoppedInput.min = progress.pagesRead + 1;
       logStoppedInput.max = progress.totalPages;
     }
     return { remaining, finished };
   }
 
-  // the two log inputs are two views of one value:
-  //   stoppedAtPage = pagesAlreadyRead + pagesReadThisSession
-  // editing either one recomputes the other. Setting .value in JS doesn't fire
-  // an "input" event, so these handlers can't bounce off each other.
+  // two views of one value, no input loops
   function syncStoppedFromPages() {
     logLastEditedStopped = false;
     if (logPagesInput.value === "") {
@@ -1318,9 +1280,7 @@
       logDateInput.value = store.todayISODate();
       if (!finished) logPagesInput.focus();
 
-      // if this log just finished the book, the rate-modal is about to take
-      // over the "nudge" job for today, so mark it nudged now, otherwise
-      // renderGrid()'s nudge pass would also pop the corner bubble underneath it
+      // the rate modal replaces today's nudge
       let willOpenRateModal = false;
       if (finished && store.shouldPromptRating(ctx.library, ctx.ratingsData, logModalBookId)) {
         willOpenRateModal = true;
@@ -1342,7 +1302,7 @@
 
   // Rereads: start and undo
 
-  // refreshes whichever modal is showing the book, then the shelf
+  // refresh the open modal, then the shelf
   async function refreshAfterRereadChange(bookId) {
     const book = store.getBookById(ctx.library, bookId);
     if (!book) return;
@@ -1379,7 +1339,7 @@
   bookRereadBtn.addEventListener("click", () => startRereadFor(editingBookId));
   bookRereadUndoBtn.addEventListener("click", () => undoRereadFor(editingBookId));
 
-  // ---- wishlist: small "corner" panel for books not owned/tracked yet ----
+  // Wishlist corner panel
 
   async function renderWishlistPanel() {
     const items = store.sortedWishlistItems(ctx.wishlistData);
@@ -1482,7 +1442,7 @@
       convertBtn.addEventListener("click", async () => {
         convertingWishlistItemId = item.id;
         closeWishlistPanel();
-        // the cover (and any Open Library hints) travel with the entry
+        // cover and hints travel with the entry
         const coverFile = await fs.readCoverFile(ctx.coversHandle, item.coverFile);
         openAddBookModal({
           title: item.title,
@@ -1566,9 +1526,7 @@
     setWishlistCoverPreview(URL.createObjectURL(file));
   });
 
-  // Open Library search above the wishlist form: a picked result fills the
-  // title and author, takes the cover, and keeps the ISBN and page count as
-  // hints for "move to library"
+  // picks keep isbn and pages as hints
   let pendingWishlistHints = null;
   const olWishlistSearch = RI.olsearch.mount(document.getElementById("ol-wishlist-search"), {
     needsPages: false,
@@ -1588,9 +1546,7 @@
     },
   });
 
-  // shared by every rendered wishlist item's cover: clicking one sets this
-  // and reuses the single hidden #wishlist-item-cover-input rather than
-  // building a per-item file input
+  // one hidden input serves every cover
   function triggerWishlistCoverChange(itemId) {
     editingWishlistCoverItemId = itemId;
     wishlistItemCoverInput.click();
@@ -1632,7 +1588,7 @@
     }
     wishlistFormError.textContent = "";
     try {
-      // a cover still downloading from Open Library must land first
+      // wait for a cover still downloading
       await olWishlistSearch.whenIdle();
       const hints = pendingWishlistHints || {};
       const item = store.createWishlistItem(ctx.wishlistData, {

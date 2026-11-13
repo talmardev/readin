@@ -12,9 +12,7 @@ RI.boot = function (onReady) {
   const errorEl = document.getElementById("setup-error");
   const appShell = document.getElementById("app-shell");
 
-  // setStateSetup/setStateGrant/the unsupported-browser branch all set button
-  // text via textContent once, outside the data-i18n scan, so a live language
-  // switch needs to explicitly re-run whichever one is currently on screen
+  // redraws the setup screen on language change
   let currentSetupState = null;
   RI.i18n.onChange(() => {
     if (currentSetupState) currentSetupState();
@@ -80,7 +78,7 @@ RI.boot = function (onReady) {
     }
   }
 
-  // requestPermission needs a real click, so this can't fire automatically
+  // needs a real click, no auto-run
   async function handleGrantPermission() {
     clearError();
     try {

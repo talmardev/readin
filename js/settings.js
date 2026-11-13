@@ -48,9 +48,7 @@
 
           const nameInput = document.createElement("input");
           nameInput.type = "text";
-          // raw stored name, never the translated display name: this input
-          // writes back to library.json on change, so showing a translation
-          // here would risk persisting it as if the user renamed the category
+          // raw name, never the translated one
           nameInput.value = category.name;
           nameInput.maxLength = 60;
           nameInput.addEventListener("change", async () => {

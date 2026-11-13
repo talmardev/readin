@@ -1,6 +1,4 @@
-// Spanish (es-ES) dictionary. Informal "tu" register throughout, matching the
-// app's casual voice. Mirrors js/i18n-en.js key-for-key; see that file for
-// the canonical key list and any notes on where a string is used.
+// Spanish dictionary, informal tu register
 RI.i18n.registerLanguage(
   "es",
   { label: "Español", flagPath: "assets/flags/es.webp", flagEmoji: "🇪🇸" },
@@ -59,6 +57,7 @@ RI.i18n.registerLanguage(
       unknownError: "error desconocido",
       dash: "-",
       changeLanguage: "Cambiar idioma",
+      darkMode: "Modo oscuro",
       starsAria_one: "{value} estrella",
       starsAria_other: "{value} estrellas",
     },

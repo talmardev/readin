@@ -1,6 +1,6 @@
 window.RI = window.RI || {};
 
-// classic script, not a module: file:// blocks ES module fetches via CORS
+// classic script, never a module
 
 RI.fs = (function () {
   "use strict";
@@ -19,10 +19,7 @@ RI.fs = (function () {
     return typeof window.showDirectoryPicker === "function";
   }
 
-  // Brave supports the File System Access API but ships the flag disabled by
-  // default; navigator.brave.isBrave() is Brave's own detection API,
-  // deliberately async so sites can't use it to synchronously fingerprint
-  // Brave users
+  // Brave ships the API flag off
   async function isBrave() {
     return !!(navigator.brave && (await navigator.brave.isBrave()));
   }
@@ -93,11 +90,7 @@ RI.fs = (function () {
     return handle.requestPermission({ mode: "readwrite" });
   }
 
-  // Is this folder itself already a readin' data folder? True if it directly
-  // holds one of our JSON files, or it's simply named "data". Lets a user
-  // point the picker straight at an existing data/ folder (e.g. to switch to
-  // a backup or move their library) without us nesting a fresh data/data
-  // inside it and ignoring the data that was already there.
+  // is this folder already a data dir
   async function looksLikeDataDir(handle) {
     if (handle.name && handle.name.toLowerCase() === "data") return true;
     const markers = [LIBRARY_FILE, LOGS_FILE, READS_FILE, RATINGS_FILE, WISHLIST_FILE];
@@ -113,8 +106,7 @@ RI.fs = (function () {
   }
 
   async function ensureDataDirs(rootHandle) {
-    // If the picked folder already IS the data folder, use it directly instead
-    // of creating a nested data/ inside it.
+    // use a picked data folder directly
     const dataHandle = (await looksLikeDataDir(rootHandle))
       ? rootHandle
       : await rootHandle.getDirectoryHandle("data", { create: true });
@@ -122,8 +114,7 @@ RI.fs = (function () {
     return { dataHandle, coversHandle };
   }
 
-  // library.json only holds books + categories now; logs live in logs.json
-  // (see readLibraryAndLogs, which also migrates any pre-existing embedded logs)
+  // library.json holds books and categories only
   async function writeLibrary(dataHandle, library) {
     const fileHandle = await dataHandle.getFileHandle(LIBRARY_FILE, { create: true });
     const writable = await fileHandle.createWritable();
@@ -132,8 +123,7 @@ RI.fs = (function () {
     await writable.close();
   }
 
-  // logs.json: { logs: [...] }, split out of library.json so books/categories
-  // stay small and logs (the fastest-growing data) live on their own
+  // Logs live in their own file
   async function readLogs(dataHandle) {
     let fileHandle;
     try {
@@ -161,12 +151,7 @@ RI.fs = (function () {
     await writeLogs(dataHandle, { logs: library.logs });
   }
 
-  // needs RI.store loaded first, for default categories and book shape.
-  // Reads library.json + logs.json and merges them into one in-memory
-  // library object ({books, categories, logs}) so store.js can keep treating
-  // "library" as a single blob. If library.json still has an embedded `logs`
-  // array (pre-split format), those entries are folded into logs.json and
-  // stripped from library.json on the spot, silently.
+  // merges library.json and logs.json in memory
   async function readLibraryAndLogs(dataHandle) {
     let fileHandle;
     let rawParsed = null;
@@ -208,7 +193,7 @@ RI.fs = (function () {
     return { library: { books, categories }, logs: existingLogs };
   }
 
-  // reads.json: one row per timed Read-page session, separate from library.json
+  // one row per timed Read session
   async function readReads(dataHandle) {
     let fileHandle;
     try {
@@ -231,10 +216,7 @@ RI.fs = (function () {
     await writable.close();
   }
 
-  // ratings.json: { ratings: [...] }, one row per book that has ever hit
-  // 100%. stars is null until the user actually rates it; the row still
-  // exists so lastNudgedDate (the once-a-day nudge-popup throttle) has
-  // somewhere to live even before a rating is given.
+  // One row per book that reached 100%
   async function readRatings(dataHandle) {
     let fileHandle;
     try {
@@ -257,8 +239,7 @@ RI.fs = (function () {
     await writable.close();
   }
 
-  // wishlist.json: { items: [...] }, books not yet owned/tracked. Separate
-  // file so it's untouched by anything that reads/writes library.json.
+  // books not owned yet, own file
   async function readWishlist(dataHandle) {
     let fileHandle;
     try {
@@ -287,8 +268,7 @@ RI.fs = (function () {
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   }
 
-  // goals.json: { dailyPages, yearlyBooks, updatedAt }. A missing or empty
-  // file means no goals; values are validated later by RI.goals.normalizeGoals.
+  // no file means no goals
   async function readGoals(dataHandle) {
     const empty = { dailyPages: null, yearlyBooks: null, updatedAt: null };
     let fileHandle;
@@ -321,9 +301,7 @@ RI.fs = (function () {
     await writable.close();
   }
 
-  // one-off exports go through the native Save As dialog rather than the
-  // app's own data/ folder handle; this is the user picking a destination
-  // outside readin's own storage, not a readin-managed file
+  // exports use Save As, not data/
   async function saveCsvAs(suggestedName, csvText) {
     const handle = await window.showSaveFilePicker({
       suggestedName,
@@ -369,7 +347,7 @@ RI.fs = (function () {
     }
   }
 
-  // the stored cover as a File, or null when it is missing
+  // cover as a File, or null
   async function readCoverFile(coversHandle, coverFile) {
     if (!coverFile) return null;
     const filename = coverFile.replace(/^covers\//, "");

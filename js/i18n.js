@@ -1,6 +1,6 @@
 window.RI = window.RI || {};
 
-// classic script, not a module. file:// blocks ES module fetches via CORS
+// classic script, never a module
 
 RI.i18n = (function () {
   "use strict";
@@ -10,7 +10,7 @@ RI.i18n = (function () {
   const FALLBACK_LANG = "en";
   const LOCALE_TAGS = { en: "en-US", pt: "pt-PT", fr: "fr-FR", es: "es-ES", de: "de-DE", zh: "zh-CN" };
 
-  const languages = {}; // code -> { meta: {label, flagPath, flagEmoji}, dict }
+  const languages = {}; // code -> meta and dict
   const changeListeners = [];
   const switcherInstances = [];
   let switcherMounted = false;
@@ -23,9 +23,7 @@ RI.i18n = (function () {
     }
   }
 
-  // Always re-read from storage rather than caching: a language dict that
-  // registers after the stored preference was first checked (script load
-  // order) must still be picked up once it arrives.
+  // reads storage each time, no cache
   function currentLang() {
     return getStoredLang() || DEFAULT_LANG;
   }
@@ -70,11 +68,7 @@ RI.i18n = (function () {
     return resolveDictValue(dict, key);
   }
 
-  // t("library.pagesOfTotal", {read: 5, total: 10}): vars.count (if present)
-  // selects a pluralized "<key>_<category>" entry via Intl.PluralRules before
-  // falling back to "<key>_other", then plain "<key>". Missing translations
-  // fall back to English, then to the raw key itself, so nothing ever renders
-  // blank.
+  // falls back to English, then the raw key
   function t(key, vars) {
     const lang = currentLang();
     let value = lookup(lang, key, vars);
@@ -95,9 +89,7 @@ RI.i18n = (function () {
     return Array.isArray(node) ? node : undefined;
   }
 
-  // For the rare dictionary entry that's a list, not a string (e.g. short
-  // month-name arrays for the heatmap). Same lang -> English -> [] fallback
-  // chain as t(), just without interpolation/pluralization.
+  // array values, same fallback chain as t()
   function tArray(key) {
     const lang = currentLang();
     let value = resolveArrayValue(languages[lang] && languages[lang].dict, key);
@@ -128,11 +120,7 @@ RI.i18n = (function () {
     changeListeners.push(cb);
   }
 
-  // Category names/groups are user DATA (library.json), not static markup.
-  // Seeded default categories have stable readable slug ids and get a real
-  // translation under category.<id>; user-created custom categories have
-  // uuid ids with free-text names that must never be translated, so an
-  // unmatched id/group just falls back to the literal stored value.
+  // custom categories are never translated
   function categoryName(category) {
     if (!category) return "";
     const key = "category." + category.id;
@@ -164,13 +152,9 @@ RI.i18n = (function () {
     });
   }
 
-  // ---- language-switcher widget: a flag+code button that opens a dropdown
-  // of registered languages. Mounted purely via JS (appended into
-  // .header-right and/or .setup-card, whichever exist in the current page's
-  // DOM) so pages never need switcher markup of their own. ----
+  // language switcher widget
 
-  // Menu order: the active language first, then English and Portuguese, then
-  // the rest alphabetically by label.
+  // active first, then en and pt
   const PINNED_LANGS = ["en", "pt"];
 
   function languageCodesSorted() {
@@ -185,16 +169,12 @@ RI.i18n = (function () {
     return pinned.concat(rest);
   }
 
-  // Tries meta.flagPath (by convention a .png) first, then the same path
-  // with a .svg extension, then finally the flagEmoji glyph. So any of a
-  // PNG, an SVG, or nothing at all dropped at assets/flags/<code>.* just
-  // works with no code change, regardless of which one a given language
-  // actually has on disk yet.
+  // flag png, then svg, then emoji
   function buildFlagEl(code) {
     const wrap = document.createElement("span");
     wrap.className = "lang-flag";
     const entry = languages[code];
-    if (!entry) return wrap; // not registered yet, filled in by the next refreshSwitcherUI()
+    if (!entry) return wrap; // filled in by the next refresh
     const meta = entry.meta || {};
     if (meta.flagPath) {
       const img = document.createElement("img");
@@ -326,10 +306,7 @@ RI.i18n = (function () {
     switcherInstances.forEach((inst) => inst.renderBtn());
   }
 
-  // dict is a plain nested object of translation strings, dot-path addressed
-  // by t(). meta = {label, flagPath, flagEmoji}; flagPath is optional and
-  // silently falls back to the flagEmoji glyph if the image 404s (no flag
-  // asset needs to exist yet for the switcher to work).
+  // dict is nested strings, dot-path addressed
   function registerLanguage(code, meta, dict) {
     languages[code] = { meta: meta || {}, dict: dict || {} };
     mountSwitcher();

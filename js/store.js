@@ -88,13 +88,13 @@ RI.store = (function () {
     return value === "owned" || value === "library" ? value : null;
   }
 
-  // read-through a book is on; a missing or invalid value means the first
+  // missing or invalid means first read
   function currentCycle(book) {
     const n = Math.floor(Number(book && book.readCount));
     return n >= 1 ? n : 1;
   }
 
-  // logs saved before rereads existed carry no cycle and belong to read 1
+  // old logs without a cycle are read 1
   function logCycle(log) {
     const n = Math.floor(Number(log && log.cycle));
     return n >= 1 ? n : 1;
@@ -230,7 +230,7 @@ RI.store = (function () {
     return library.categories.filter((c) => used.has(c.id));
   }
 
-  // pagesRead is pages read since the last log, not the current page number
+  // Pages read is incremental, not the page number
   function addLog(library, { bookId, pagesRead, date, isPastRead }) {
     const log = {
       id: generateId(),
@@ -257,7 +257,7 @@ RI.store = (function () {
     return library.logs.filter((l) => l.bookId === bookId);
   }
 
-  // only the read-through in progress; this drives progress and the 100% cap
+  // only the current read-through
   function logsForCurrentCycle(library, bookId) {
     const cycle = currentCycle(getBookById(library, bookId));
     return logsForBook(library, bookId).filter((l) => logCycle(l) === cycle);
@@ -274,7 +274,7 @@ RI.store = (function () {
     return { pagesRead, totalPages, percent };
   }
 
-  // pages still loggable before the book hits 100%; never negative
+  // pages left before 100%, never negative
   function remainingPages(library, book) {
     const progress = progressForBook(library, book);
     return Math.max(0, progress.totalPages - progress.pagesRead);
@@ -313,7 +313,7 @@ RI.store = (function () {
     });
   }
 
-  // only dated logs count here; past-read entries have no date
+  // dated logs only, past reads have no date
   function datedLogDateSet(library) {
     const set = new Set();
     for (const log of library.logs) {
@@ -378,8 +378,7 @@ RI.store = (function () {
     return remainingPages(library, book) <= 0 && progressForBook(library, book).pagesRead > 0;
   }
 
-  // one entry per (book, cycle) that has at least one log, books in shelf
-  // array order and cycles ascending
+  // one entry per book and cycle with logs
   function readCycles(library) {
     const byBook = new Map();
     for (const log of library.logs) {
@@ -412,8 +411,7 @@ RI.store = (function () {
     return out;
   }
 
-  // one entry per finished read-through. finishedDate is the latest dated
-  // log of that cycle, or null when it only has past-read logs.
+  // One entry per finished read-through
   function completedReads(library) {
     return readCycles(library)
       .filter((c) => c.complete)
@@ -424,14 +422,12 @@ RI.store = (function () {
       }));
   }
 
-  // every finished read-through counts, so rereading a book adds to the total
+  // rereads count, so the total grows
   function booksReadCount(library) {
     return completedReads(library).length;
   }
 
-  // days from a finished read-through's first dated log to its last; past-read
-  // logs (no date) can't anchor a span, so reads finished only via past reads
-  // are excluded rather than counted as "0 days"
+  // span from first to last dated log
   function averageDaysToComplete(library) {
     const spans = [];
     readCycles(library).forEach((c) => {
@@ -444,13 +440,12 @@ RI.store = (function () {
     return spans.reduce((a, c) => a + c, 0) / spans.length;
   }
 
-  // read-through number a book is on (1 for a first read)
+  // which read-through the book is on
   function readCountForBook(library, bookId) {
     return currentCycle(getBookById(library, bookId));
   }
 
-  // starts the next read-through at 0%; only allowed once the current one is
-  // finished. Earlier logs stay untouched and keep their cycle.
+  // next read-through starts at 0%
   function startReread(library, bookId) {
     const book = getBookById(library, bookId);
     if (!book || !isBookFinished(library, book)) return null;
@@ -458,7 +453,7 @@ RI.store = (function () {
     return book;
   }
 
-  // a reread can be dropped only while it has no logs of its own
+  // undo only while the reread has no logs
   function canUndoReread(library, bookId) {
     const book = getBookById(library, bookId);
     return !!book && currentCycle(book) > 1 && logsForCurrentCycle(library, bookId).length === 0;
@@ -471,8 +466,7 @@ RI.store = (function () {
     return book;
   }
 
-  // whether the "You finished it!" modal should open after a log: always for
-  // an unrated book, and after any reread so the earlier rating is confirmed
+  // prompt for unrated books and after rereads
   function shouldPromptRating(library, ratingsData, bookId) {
     const book = getBookById(library, bookId);
     if (!book || !isBookFinished(library, book)) return false;
@@ -480,8 +474,7 @@ RI.store = (function () {
     return !rating || !rating.stars || currentCycle(book) > 1;
   }
 
-  // mean pages logged on days that had at least one dated log (not a
-  // pace-over-all-calendar-days figure)
+  // mean pages on days with a dated log
   function averagePagesPerDay(library) {
     const map = pagesPerDay(library);
     if (map.size === 0) return null;
@@ -490,9 +483,7 @@ RI.store = (function () {
     return total / map.size;
   }
 
-  // for the Read-timer book picker: in-progress books first, then unstarted
-  // (0 pages read), then finished books last; each tier keeps the library's
-  // usual most-recent-activity ordering
+  // in progress, then unstarted, then finished
   function groupBooksForReadPicker(library) {
     const sorted = sortedBooksForLibrary(library);
     const inProgress = [];
@@ -515,8 +506,7 @@ RI.store = (function () {
     return ratingsData.ratings.find((r) => r.bookId === bookId) || null;
   }
 
-  // every finished book gets a row here eventually, even before it's rated;
-  // stars stays null and lastNudgedDate tracks the once-a-day shelf nudge
+  // finished books always get a rating row
   function ensureRatingEntry(ratingsData, bookId) {
     let entry = getRating(ratingsData, bookId);
     if (!entry) {
@@ -542,10 +532,7 @@ RI.store = (function () {
     return entry;
   }
 
-  // how "full" star slot `index` (1-5) should render for a given rating value:
-  // 1 = fully filled, 0.5 = half filled, 0 = empty. Shared by both the
-  // non-interactive card display and the interactive star pickers so a value
-  // like 3.5 renders identically everywhere.
+  // Star fill: 1 full, 0.5 half, 0 empty
   function starFraction(value, index) {
     const v = Number(value) || 0;
     if (v >= index) return 1;
@@ -560,8 +547,7 @@ RI.store = (function () {
     return entry;
   }
 
-  // the shelf-side "Rate it" nudge: only for unrated finished books, and only
-  // once per calendar day per book
+  // nudge unrated finished books once a day
   function shouldShowRatingNudge(ratingsData, bookId, todayISO) {
     const today = todayISO || todayISODate();
     const entry = getRating(ratingsData, bookId);
@@ -577,7 +563,7 @@ RI.store = (function () {
     return s;
   }
 
-  // one row per book, in the same order the shelf renders them
+  // one row per book, in shelf order
   function libraryToCSV(library, ratingsData) {
     const headers = [
       "Title",
@@ -641,12 +627,7 @@ RI.store = (function () {
     return { items: [] };
   }
 
-  // title required, author/link optional; no categories, a wishlist entry is
-  // just enough to remember a book exists. isbn and totalPages are optional
-  // hints (set when the entry came from an Open Library result) that only
-  // prefill the Add Book form on "move to library".
-  // coverFile starts null and is only ever set afterward via
-  // updateWishlistItem, once fs.saveCover has a real id to key the file by.
+  // coverFile is set once saveCover has an id
   function createWishlistItem(wishlistData, { title, author, link, isbn, totalPages }) {
     const pages = Math.round(Number(totalPages));
     const item = {
@@ -663,8 +644,7 @@ RI.store = (function () {
     return item;
   }
 
-  // only coverFile is ever patched here; title/author/link stay fixed once
-  // a wishlist entry is created
+  // only coverFile is ever patched
   function updateWishlistItem(wishlistData, itemId, patch) {
     const item = wishlistData.items.find((i) => i.id === itemId);
     if (!item) return null;

@@ -1,9 +1,4 @@
-// Simplified Chinese (zh-CN, Mandarin) dictionary. Mirrors js/i18n-en.js
-// key-for-key; see that file for the canonical key list and any notes on
-// where a string is used. Chinese has no grammatical plural, so each
-// "_one"/"_other" pair holds the same text; the pairs stay only so the key
-// list matches the other dictionaries. The flag file is cn.png (country
-// code), while the language code is zh, so flagPath is set explicitly.
+// Chinese dictionary, plural pairs are identical
 RI.i18n.registerLanguage(
   "zh",
   { label: "中文", flagPath: "assets/flags/cn.png", flagEmoji: "🇨🇳" },
@@ -62,6 +57,7 @@ RI.i18n.registerLanguage(
       unknownError: "未知错误",
       dash: "-",
       changeLanguage: "切换语言",
+      darkMode: "深色模式",
       starsAria_one: "{value} 星",
       starsAria_other: "{value} 星",
     },

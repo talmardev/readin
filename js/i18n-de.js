@@ -1,6 +1,4 @@
-// German (de-DE) dictionary. Informal "du" register throughout, matching the
-// app's casual voice. Mirrors js/i18n-en.js key-for-key; see that file for
-// the canonical key list and any notes on where a string is used.
+// German dictionary, informal du register
 RI.i18n.registerLanguage(
   "de",
   { label: "Deutsch", flagPath: "assets/flags/de.png", flagEmoji: "🇩🇪" },
@@ -59,6 +57,7 @@ RI.i18n.registerLanguage(
       unknownError: "unbekannter Fehler",
       dash: "-",
       changeLanguage: "Sprache ändern",
+      darkMode: "Dunkelmodus",
       starsAria_one: "{value} Stern",
       starsAria_other: "{value} Sterne",
     },

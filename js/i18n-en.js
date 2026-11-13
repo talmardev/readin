@@ -1,10 +1,4 @@
-// English dictionary. This is the baseline/fallback: RI.i18n.t() falls back
-// to this language for any key missing from the active one, so this file
-// should always have full key coverage. Nested objects, dot-path addressed.
-// Keys ending in a plural noun/verb form come in "<key>_one"/"<key>_other"
-// pairs (Intl.PluralRules-selected, see js/i18n.js) rather than a single
-// "{n} item(s)" string, since other languages may need the verb (not just
-// the noun) to change with count.
+// English dictionary, also the fallback
 RI.i18n.registerLanguage(
   "en",
   { label: "English", flagPath: "assets/flags/en.png", flagEmoji: "🇬🇧" },
@@ -63,6 +57,7 @@ RI.i18n.registerLanguage(
       unknownError: "unknown error",
       dash: "-",
       changeLanguage: "Change language",
+      darkMode: "Dark mode",
       starsAria_one: "{value} star",
       starsAria_other: "{value} stars",
     },
@@ -289,8 +284,7 @@ RI.i18n.registerLanguage(
       backToLibrary: "Back to Library",
     },
 
-    // Static wishlist chrome only (index.html). Dynamic list-item rendering
-    // and aria-labels live in js/library.js; keys here cover both.
+    // static wishlist strings
     wishlist: {
       title: "Wishlist",
       closeAria: "Close wishlist",
@@ -313,8 +307,7 @@ RI.i18n.registerLanguage(
       removeCoverAria: "Remove cover for {title}",
     },
 
-    // Open Library search box (js/olsearch.js), shown in the Add Book modal
-    // and the wishlist panel.
+    // Open Library search strings
     openlibrary: {
       searchLabel: "Find your book",
       suggestionsTitle: "Suggestions",

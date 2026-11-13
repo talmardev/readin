@@ -13,7 +13,7 @@
 
   let selectedBookId = null;
   let selectedMode = "countdown"; // "countdown" | "stopwatch"
-  let session = null; // { bookId, mode, plannedMinutes, startedAt, pausedSeconds, pauseStartedAt, endedAt, endedEarly, activeSeconds }
+  let session = null; // the active timer session
   let tickTimer = null;
 
   let pickerCoverUrls = [];
@@ -67,8 +67,7 @@
   let rateModalBookId = null;
   let pendingSavedSummary = null;
 
-  // pages already logged for the finished session's book: the offset that
-  // converts between "pages read this session" and "stopped at page"
+  // pages already logged, the stopped-at offset
   let finishedPagesAlready = 0;
   let finishedLastEditedStopped = false;
 
@@ -115,8 +114,7 @@
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || !parsed.bookId || !parsed.startedAt) return null;
-      // sessions saved before stopwatch mode existed have no `mode` field;
-      // they were always countdown sessions, so default them to that
+      // old sessions without mode were countdown
       const mode = parsed.mode === "stopwatch" ? "stopwatch" : "countdown";
       if (mode === "countdown" && !parsed.plannedMinutes) return null;
       return {
@@ -161,7 +159,7 @@
     return new Date(iso).toLocaleTimeString(RI.i18n.getLocale(), { hour: "numeric", minute: "2-digit" });
   }
 
-  // ---- cover url helpers ----
+  // cover url helpers
 
   function revokePickerCovers() {
     pickerCoverUrls.forEach((u) => URL.revokeObjectURL(u));
@@ -203,7 +201,7 @@
     container.appendChild(info);
   }
 
-  // ---- step: book picker ----
+  // Step: book picker
 
   function subtextForBook(book, tierKey) {
     const parts = [];
@@ -304,7 +302,7 @@
     showStep("book");
   });
 
-  // ---- step: duration picker ----
+  // step: duration picker
 
   function setActiveChip(minutes) {
     durationChipsEl.querySelectorAll(".duration-chip").forEach((chip) => {
@@ -374,7 +372,7 @@
     await enterTimerStep();
   });
 
-  // ---- step: timer ----
+  // Step: timer
 
   function pausedMsSoFar(now) {
     let ms = session.pausedSeconds * 1000;
@@ -408,9 +406,7 @@
   function tick() {
     const now = Date.now();
     if (session.mode === "stopwatch") {
-      // stopwatch has no total to count down against, so the ring just
-      // stays fully lit (set once in enterTimerStep) as a "running" cue;
-      // only the elapsed time counts up, and only "Stop Reading" ends it
+      // stopwatch ring stays lit, only Stop ends it
       timerTimeEl.textContent = formatMMSS(activeMs(now));
       return;
     }
@@ -460,7 +456,7 @@
     finishSession(true, Date.now());
   });
 
-  // ---- step: finished ----
+  // step: finished
 
   async function finishSession(endedEarly, now) {
     if (tickTimer) {
@@ -476,9 +472,7 @@
     let endedAtMs = now;
     let activeSecondsVal = Math.round(activeMs(now) / 1000);
     if (!endedEarly) {
-      // natural timeout: anchor to the moment the clock actually hit zero,
-      // not to "now": a backgrounded/throttled tab can call this well after
-      // the fact, which would otherwise inflate time-read past the plan
+      // anchor to when the clock hit zero
       endedAtMs = Date.parse(session.startedAt) + plannedMs + session.pausedSeconds * 1000;
       activeSecondsVal = Math.round(plannedMs / 1000);
     }
@@ -525,10 +519,7 @@
     finishedFormError.textContent = "";
   }
 
-  // the two finish-screen inputs are two views of one value:
-  //   stoppedAtPage = pagesAlreadyRead + pagesReadThisSession
-  // editing either recomputes the other. Setting .value in JS doesn't fire an
-  // "input" event, so these handlers can't bounce off each other.
+  // two views of one value, no input loops
   finishedPagesInput.addEventListener("input", () => {
     finishedLastEditedStopped = false;
     if (finishedPagesInput.value === "") {
@@ -551,7 +542,7 @@
     finishedPagesInput.value = stopped - finishedPagesAlready;
   });
 
-  // ---- rating modal ----
+  // rating modal
 
   async function persistRatings() {
     try {
@@ -562,14 +553,7 @@
     }
   }
 
-  // one interactive star position: a visual glyph (bg + fg) plus two
-  // invisible half-width buttons stacked on top: clicking is a real DOM
-  // element hit (dedicated "set to X.5" / "set to X" buttons), not
-  // pixel-position math against getBoundingClientRect, so it's reliable
-  // regardless of zoom/DPI/click precision, and every half-star is reachable
-  // by keyboard/Tab. Same approach as js/library.js's picker, kept
-  // duplicated per this codebase's per-page style rather than factored into
-  // a shared file.
+  // Star slot, same as the library picker
   function buildStarSlot(index, onPick, onPreview) {
     const slot = document.createElement("span");
     slot.className = "star-slot";
@@ -643,8 +627,7 @@
     if (!book) return;
     rateModalBookId = bookId;
     await renderBookSummary(rateModalBookEl, book);
-    // after a reread the previous rating is prefilled and the wording asks to
-    // confirm or change it; data-i18n is swapped so a language switch keeps it
+    // after a reread, prefill the old rating
     const rating = store.getRating(ctx.ratingsData, bookId);
     const previous = rating && rating.stars ? rating.stars : 0;
     rateModalQuestion.setAttribute("data-i18n", previous ? "reread.rateQuestionAgain" : "library.rateModalQuestion");
@@ -734,8 +717,7 @@
       const bookId = session.bookId;
       session = null;
 
-      // this log just finished the book (remaining was checked >0 above):
-      // offer the rating modal before showing the plain "saved" screen
+      // offer the rating modal after a finish
       if (store.shouldPromptRating(ctx.library, ctx.ratingsData, bookId)) {
         store.markRatingNudged(ctx.ratingsData, bookId, store.todayISODate());
         await persistRatings();
@@ -760,7 +742,7 @@
     showStep("book");
   });
 
-  // ---- boot ----
+  // Boot
 
   function setDocTitle() {
     document.title = "readin' - " + t("nav.read");
@@ -769,8 +751,7 @@
   RI.i18n.onChange(async () => {
     setDocTitle();
     if (!ctx) return;
-    // re-render whichever step is currently visible so a language switch
-    // mid-flow updates instantly instead of only on the next navigation
+    // re-render the visible step on language change
     if (!stepEls.book.classList.contains("hidden")) await renderBookPicker();
     else if (!stepEls.duration.classList.contains("hidden")) setMode(selectedMode);
     else if (!stepEls.timer.classList.contains("hidden")) {

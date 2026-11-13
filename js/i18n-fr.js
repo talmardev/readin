@@ -1,6 +1,4 @@
-// French (fr-FR) dictionary. Informal "tu" register throughout, matching the
-// app's casual voice. Mirrors js/i18n-en.js key-for-key; see that file for
-// the canonical key list and any notes on where a string is used.
+// French dictionary, informal tu register
 RI.i18n.registerLanguage(
   "fr",
   { label: "Français", flagPath: "assets/flags/fr.png", flagEmoji: "🇫🇷" },
@@ -59,6 +57,7 @@ RI.i18n.registerLanguage(
       unknownError: "erreur inconnue",
       dash: "-",
       changeLanguage: "Changer de langue",
+      darkMode: "Mode sombre",
       starsAria_one: "{value} étoile",
       starsAria_other: "{value} étoiles",
     },

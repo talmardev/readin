@@ -1,10 +1,4 @@
-// European Portuguese (pt-PT) dictionary. Informal "tu" register throughout
-// (not "você"), matching how the app's single user addresses it. Generic
-// masculine used where PT has no clean gender-neutral phrasing (e.g.
-// "Bem-vindo de volta"), the standard convention in PT software copy.
-// Comics/graphic novels uses "Banda Desenhada" (PT-PT), not Brazilian
-// "quadrinhos". Mirrors js/i18n-en.js key-for-key; see that file for the
-// canonical key list and any notes on where a string is used.
+// pt-PT dictionary, informal tu register
 RI.i18n.registerLanguage(
   "pt",
   { label: "Português", flagPath: "assets/flags/pt.png", flagEmoji: "🇵🇹" },
@@ -63,6 +57,7 @@ RI.i18n.registerLanguage(
       unknownError: "erro desconhecido",
       dash: "-",
       changeLanguage: "Mudar de idioma",
+      darkMode: "Modo escuro",
       starsAria_one: "{value} estrela",
       starsAria_other: "{value} estrelas",
     },
