@@ -812,13 +812,23 @@
     bookRereadField.classList.add("hidden");
     bookModalDeleteRow.classList.add("hidden");
     bookFormError.textContent = "";
+    olBookBlock.classList.remove("hidden");
+    bookModal.classList.add("is-adding");
+    olBookSearch.reset();
+    if (wideModalQuery.matches) olBookSearch.showSuggestions();
     showOverlay(bookModalOverlay);
     if (prefill) {
       bookTitleInput.value = prefill.title || "";
       bookAuthorInput.value = prefill.author || "";
+      bookIsbnInput.value = prefill.isbn || "";
+      bookPagesInput.value = prefill.pages || "";
+      if (prefill.coverFile) {
+        pendingCoverFile = prefill.coverFile;
+        setCoverPreview(URL.createObjectURL(prefill.coverFile));
+      }
       bookPagesInput.focus();
     } else {
-      bookTitleInput.focus();
+      olBookSearch.focus();
     }
   }
 
@@ -841,6 +851,9 @@
     editingBookId = bookId;
     pendingCoverFile = null;
     pendingCoverRemoved = false;
+    olBookBlock.classList.add("hidden");
+    bookModal.classList.remove("is-adding");
+    olBookSearch.reset();
     bookModalTitle.textContent = t("library.modalTitleEdit");
     bookModalSubmit.textContent = t("library.submitEdit");
     bookTitleInput.value = book.title;
@@ -874,6 +887,7 @@
     pendingCoverRemoved = false;
     pendingOwnership = null;
     coverInput.value = "";
+    olBookSearch.reset();
     convertingWishlistItemId = null;
   }
 
@@ -897,6 +911,7 @@
       return;
     }
     bookFormError.textContent = "";
+    olBookSearch.cancelCover();
     pendingCoverFile = file;
     pendingCoverRemoved = false;
     setCoverPreview(URL.createObjectURL(file));
@@ -904,10 +919,88 @@
 
   coverRemoveBtn.addEventListener("click", (e) => {
     e.stopPropagation();
+    olBookSearch.cancelCover();
     pendingCoverFile = null;
     pendingCoverRemoved = true;
     coverInput.value = "";
     setCoverPreview(null);
+  });
+
+  // Open Library search above the Add Book form: a picked result fills the
+  // form fields, and its cover becomes the pending cover file
+  const bookModal = document.getElementById("book-modal");
+  const olBookBlock = document.getElementById("ol-book-block");
+  // the two-column Add Book layout (and its suggestions) is desktop only
+  const wideModalQuery = window.matchMedia("(min-width: 900px)");
+
+  // lowercase, accent-free text for comparing titles; falls back to the raw
+  // lowercase text for scripts the pattern would strip entirely
+  function matchKey(text) {
+    const plain = String(text || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+    return plain || String(text || "").trim().toLowerCase();
+  }
+
+  // first author name of each book, most recently added book first
+  function libraryAuthorNames() {
+    const seen = new Set();
+    const names = [];
+    ctx.library.books
+      .slice()
+      .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
+      .forEach((book) => {
+        const first = String(book.author || "").split(/,|;|&| and /i)[0].trim();
+        if (first && !seen.has(first.toLowerCase())) {
+          seen.add(first.toLowerCase());
+          names.push(first);
+        }
+      });
+    return names;
+  }
+
+  // other books by the authors already on the shelf, topped up with trending
+  // ones, never a book that is already in the library
+  function loadBookSuggestions() {
+    const titles = new Set();
+    const isbns = new Set();
+    ctx.library.books.forEach((book) => {
+      titles.add(matchKey(book.title));
+      if (book.isbn) isbns.add(String(book.isbn).replace(/[\s-]/g, ""));
+    });
+    return RI.openlibrary.suggestions({
+      authors: libraryAuthorNames(),
+      lang: RI.i18n.getLanguage(),
+      isOwned: (result) =>
+        titles.has(matchKey(result.title)) ||
+        titles.has(matchKey(result.workTitle)) ||
+        Boolean(result.isbn && isbns.has(result.isbn)),
+    });
+  }
+
+  const olBookSearch = RI.olsearch.mount(olBookBlock, {
+    loadSuggestions: loadBookSuggestions,
+    onPick(result) {
+      bookTitleInput.value = result.title;
+      bookAuthorInput.value = result.author;
+      bookPagesInput.value = result.pages || "";
+      bookIsbnInput.value = result.isbn;
+      pendingCoverFile = null;
+      pendingCoverRemoved = false;
+      coverInput.value = "";
+      setCoverPreview(null);
+      bookFormError.textContent = "";
+      if (!result.pages) bookPagesInput.focus();
+      else olBookSearch.focus();
+    },
+    onCover(file) {
+      pendingCoverFile = file;
+      pendingCoverRemoved = false;
+      setCoverPreview(URL.createObjectURL(file));
+    },
   });
 
   bookForm.addEventListener("submit", async (e) => {
@@ -931,6 +1024,8 @@
     bookModalSubmit.disabled = true;
 
     try {
+      // a cover still downloading from Open Library must land first
+      await olBookSearch.whenIdle();
       if (editingBookId) {
         const book = store.getBookById(ctx.library, editingBookId);
         if (pendingCoverRemoved && book.coverFile) {
@@ -1384,10 +1479,18 @@
       convertBtn.title = t("wishlist.moveToLibraryTitle");
       convertBtn.setAttribute("aria-label", t("wishlist.moveToLibraryAria", { title: item.title }));
       convertBtn.innerHTML = MOVE_SVG;
-      convertBtn.addEventListener("click", () => {
+      convertBtn.addEventListener("click", async () => {
         convertingWishlistItemId = item.id;
         closeWishlistPanel();
-        openAddBookModal({ title: item.title, author: item.author });
+        // the cover (and any Open Library hints) travel with the entry
+        const coverFile = await fs.readCoverFile(ctx.coversHandle, item.coverFile);
+        openAddBookModal({
+          title: item.title,
+          author: item.author,
+          isbn: item.isbn,
+          pages: item.totalPages,
+          coverFile,
+        });
       });
       actions.appendChild(convertBtn);
 
@@ -1458,8 +1561,31 @@
       return;
     }
     wishlistFormError.textContent = "";
+    olWishlistSearch.cancelCover();
     pendingWishlistCoverFile = file;
     setWishlistCoverPreview(URL.createObjectURL(file));
+  });
+
+  // Open Library search above the wishlist form: a picked result fills the
+  // title and author, takes the cover, and keeps the ISBN and page count as
+  // hints for "move to library"
+  let pendingWishlistHints = null;
+  const olWishlistSearch = RI.olsearch.mount(document.getElementById("ol-wishlist-search"), {
+    needsPages: false,
+    onPick(result) {
+      wishlistTitleInput.value = result.title;
+      wishlistAuthorInput.value = result.author;
+      pendingWishlistHints = { isbn: result.isbn, totalPages: result.pages };
+      pendingWishlistCoverFile = null;
+      wishlistCoverInput.value = "";
+      setWishlistCoverPreview(null);
+      wishlistFormError.textContent = "";
+      olWishlistSearch.focus();
+    },
+    onCover(file) {
+      pendingWishlistCoverFile = file;
+      setWishlistCoverPreview(URL.createObjectURL(file));
+    },
   });
 
   // shared by every rendered wishlist item's cover: clicking one sets this
@@ -1506,7 +1632,16 @@
     }
     wishlistFormError.textContent = "";
     try {
-      const item = store.createWishlistItem(ctx.wishlistData, { title, author, link });
+      // a cover still downloading from Open Library must land first
+      await olWishlistSearch.whenIdle();
+      const hints = pendingWishlistHints || {};
+      const item = store.createWishlistItem(ctx.wishlistData, {
+        title,
+        author,
+        link,
+        isbn: hints.isbn,
+        totalPages: hints.totalPages,
+      });
       if (pendingWishlistCoverFile) {
         const path = await fs.saveCover(ctx.coversHandle, item.id, pendingWishlistCoverFile);
         store.updateWishlistItem(ctx.wishlistData, item.id, { coverFile: path });
@@ -1514,6 +1649,8 @@
       await persistWishlist();
       wishlistForm.reset();
       pendingWishlistCoverFile = null;
+      pendingWishlistHints = null;
+      olWishlistSearch.reset();
       setWishlistCoverPreview(null);
       await renderWishlistPanel();
       wishlistTitleInput.focus();

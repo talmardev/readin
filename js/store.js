@@ -641,16 +641,21 @@ RI.store = (function () {
     return { items: [] };
   }
 
-  // title required, author/link optional; deliberately no totalPages/
-  // categories, a wishlist entry is just enough to remember a book exists.
+  // title required, author/link optional; no categories, a wishlist entry is
+  // just enough to remember a book exists. isbn and totalPages are optional
+  // hints (set when the entry came from an Open Library result) that only
+  // prefill the Add Book form on "move to library".
   // coverFile starts null and is only ever set afterward via
   // updateWishlistItem, once fs.saveCover has a real id to key the file by.
-  function createWishlistItem(wishlistData, { title, author, link }) {
+  function createWishlistItem(wishlistData, { title, author, link, isbn, totalPages }) {
+    const pages = Math.round(Number(totalPages));
     const item = {
       id: generateId(),
       title: (title || "").trim(),
       author: (author || "").trim(),
       link: (link || "").trim() || null,
+      isbn: (isbn || "").trim() || null,
+      totalPages: Number.isFinite(pages) && pages >= 1 ? pages : null,
       coverFile: null,
       createdAt: new Date().toISOString(),
     };

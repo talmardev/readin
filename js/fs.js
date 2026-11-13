@@ -369,6 +369,18 @@ RI.fs = (function () {
     }
   }
 
+  // the stored cover as a File, or null when it is missing
+  async function readCoverFile(coversHandle, coverFile) {
+    if (!coverFile) return null;
+    const filename = coverFile.replace(/^covers\//, "");
+    try {
+      const fileHandle = await coversHandle.getFileHandle(filename, { create: false });
+      return await fileHandle.getFile();
+    } catch (err) {
+      return null;
+    }
+  }
+
   async function readCoverAsURL(coversHandle, coverFile) {
     if (!coverFile) return null;
     const filename = coverFile.replace(/^covers\//, "");
@@ -406,6 +418,7 @@ RI.fs = (function () {
     saveCsvAs,
     saveCover,
     deleteCover,
+    readCoverFile,
     readCoverAsURL,
   };
 })();

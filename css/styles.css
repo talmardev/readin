@@ -114,6 +114,24 @@ a {
   display: block;
 }
 
+/* Wide windows: a bigger logo. readin_logo.svg is a 1500x500 canvas with the
+   wordmark in x 114..1385, y 105..393, so the negative margins crop the empty
+   space and leave a visible mark of about 183x42px (scale 0.144 of the
+   canvas). The padding keeps the bar at its usual height. Narrower windows
+   keep the small logo. */
+@media (min-width: 800px) {
+  .app-header {
+    padding-top: 13px;
+    padding-bottom: 13px;
+  }
+
+  .brand-logo {
+    height: 72px;
+    max-width: none;
+    margin: -15.2px -16.5px;
+  }
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -2290,5 +2308,451 @@ input[disabled] {
   .goal-tile {
     gap: 14px;
     padding: 14px 16px;
+  }
+}
+
+/* ===== Open Library search ===== */
+.ol-search {
+  padding: 16px 16px 14px;
+  background: #f1f7ed;
+  border: 1px solid #d3e6cd;
+  border-radius: var(--radius-md);
+}
+
+.ol-search .ol-search-label {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--green-deep);
+}
+
+.ol-search-row {
+  position: relative;
+}
+
+.ol-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--green-deep);
+  pointer-events: none;
+}
+
+.ol-search .ol-search-input {
+  padding: 15px 46px;
+  font-size: 1.05rem;
+  background: var(--surface);
+  border: 2px solid var(--green-deep);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.ol-search .ol-search-input::placeholder {
+  color: var(--ink-muted);
+}
+
+.ol-search .ol-search-input:focus {
+  background: var(--surface);
+  border-color: var(--green-deep);
+  box-shadow: 0 0 0 4px rgba(11, 110, 18, 0.16), var(--shadow-md);
+}
+
+.ol-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.ol-search-clear:hover {
+  color: var(--ink);
+}
+
+.ol-search.is-loading .ol-search-input {
+  cursor: progress;
+}
+
+.ol-search.is-loading .ol-search-icon {
+  animation: ol-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes ol-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ol-search.is-loading .ol-search-icon {
+    animation: none;
+  }
+}
+
+.ol-status {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+
+.ol-status.is-error {
+  color: var(--danger);
+}
+
+.ol-status.is-ok {
+  color: var(--green-deep);
+}
+
+.ol-results {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  max-height: 264px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.ol-results li + li {
+  border-top: 1px solid var(--line);
+}
+
+.ol-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+  color: var(--ink);
+}
+
+.ol-result:hover,
+.ol-result:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.ol-result-thumb {
+  width: 36px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #e4e0d0, #f2efe4);
+  box-shadow: var(--shadow-sm);
+}
+
+.ol-result-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ol-result-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ol-result-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ol-result-meta {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+.ol-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.74rem;
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+
+.ol-hint:hover {
+  color: var(--green-deep);
+  text-decoration: underline;
+}
+
+.ol-manual-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.ol-manual-label::before,
+.ol-manual-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ===== Open Library suggestions ===== */
+.ol-suggest {
+  margin-top: 18px;
+}
+
+.ol-suggest-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ol-suggest-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 14px 14px;
+}
+
+.ol-suggest-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+  color: var(--ink);
+}
+
+.ol-suggest-cover {
+  display: block;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(150deg, #e4e0d0, #f2efe4);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.ol-suggest-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ol-suggest-item:hover .ol-suggest-cover,
+.ol-suggest-item:focus-visible .ol-suggest-cover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.ol-suggest-item:focus-visible {
+  outline: none;
+}
+
+.ol-suggest-name {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ol-suggest-author {
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ol-suggest-skeleton {
+  aspect-ratio: 2 / 3.4;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(100deg, #e4e0d0 30%, #f2efe4 50%, #e4e0d0 70%);
+  background-size: 200% 100%;
+  animation: ol-shimmer 1.3s linear infinite;
+}
+
+@keyframes ol-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* ===== Add Book modal layout ===== */
+.book-modal:not(.is-adding) .ol-manual-label {
+  display: none;
+}
+
+.field-half {
+  min-width: 0;
+}
+
+/* phones and narrow windows keep the single column and skip suggestions */
+@media (max-width: 899px) {
+  .ol-suggest {
+    display: none;
+  }
+}
+
+/* desktop: wide rectangle, search on the left, manual form on the right */
+@media (min-width: 900px) {
+  .book-modal.is-adding {
+    max-width: 1060px;
+    height: min(780px, calc(100vh - 48px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .book-modal.is-adding .modal-header {
+    flex-shrink: 0;
+    margin-bottom: 18px;
+  }
+
+  .book-modal.is-adding .book-modal-body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .book-modal.is-adding .book-modal-find {
+    display: flex;
+    min-height: 0;
+  }
+
+  .book-modal.is-adding .ol-search {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px 30px 16px;
+    border-radius: var(--radius-lg);
+  }
+
+  .book-modal.is-adding .ol-search > * {
+    flex-shrink: 0;
+  }
+
+  .book-modal.is-adding .ol-search .ol-search-label {
+    margin-bottom: 12px;
+    font-size: 1.4rem;
+  }
+
+  .book-modal.is-adding .ol-search .ol-search-input {
+    padding: 17px 54px 17px 58px;
+    font-size: 1.2rem;
+  }
+
+  .book-modal.is-adding .ol-search-icon {
+    left: 20px;
+  }
+
+  .book-modal.is-adding .ol-search-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .book-modal.is-adding .ol-search-clear {
+    right: 16px;
+  }
+
+  .book-modal.is-adding .ol-results {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .book-modal.is-adding .ol-hint {
+    margin-top: auto;
+    padding-top: 12px;
+  }
+
+  .book-modal.is-adding .book-modal-manual {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+
+  .book-modal.is-adding .ol-manual-label {
+    margin: 2px 0 16px;
+  }
+
+  .book-modal.is-adding .ol-manual-label::before {
+    display: none;
+  }
+
+  .book-modal.is-adding #book-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;
+  }
+
+  .book-modal.is-adding #book-form > * {
+    grid-column: 1 / -1;
+  }
+
+  .book-modal.is-adding #book-form > .field-half {
+    grid-column: auto;
+  }
+
+  .book-modal.is-adding .category-checklist {
+    max-height: 150px;
+  }
+
+  .book-modal.is-adding .modal-actions {
+    position: sticky;
+    bottom: 0;
+    margin-top: 4px;
+    padding: 14px 0 2px;
+    background: var(--surface);
   }
 }

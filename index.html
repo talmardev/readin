@@ -64,75 +64,83 @@
 </div>
 
 <div id="book-modal-overlay" class="modal-overlay hidden">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="book-modal-title">
+  <div class="modal book-modal" id="book-modal" role="dialog" aria-modal="true" aria-labelledby="book-modal-title">
     <div class="modal-header">
       <h2 class="modal-title" id="book-modal-title" data-i18n="library.modalTitleAdd">Add book</h2>
       <button type="button" class="modal-close" id="book-modal-close" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
     </div>
 
-    <form id="book-form" novalidate>
-      <div class="cover-upload">
-        <div class="cover-drop" id="cover-drop" role="button" tabindex="0" aria-label="Choose a cover image" data-i18n-aria-label="library.chooseCoverAria">
-          <span id="cover-drop-placeholder" data-i18n="library.noCover">No cover</span>
-          <img id="cover-preview" class="hidden" alt="" />
-        </div>
-        <div class="cover-upload-text">
-          <span data-i18n="library.coverHint">Upload a cover image (optional).</span>
-          <br />
-          <button type="button" id="cover-remove-btn" class="hidden" data-i18n="library.removeCover">Remove cover</button>
-        </div>
-        <input type="file" id="cover-input" accept="image/*" class="hidden" />
-      </div>
+    <div class="book-modal-body">
+      <div id="ol-book-block" class="book-modal-find"></div>
 
-      <div class="field">
-        <label for="book-title-input" data-i18n="library.fieldTitle">Title</label>
-        <input type="text" id="book-title-input" required maxlength="200" placeholder="The Left Hand of Darkness" />
-      </div>
-      <div class="field">
-        <label for="book-author-input" data-i18n="library.fieldAuthor">Author</label>
-        <input type="text" id="book-author-input" maxlength="200" placeholder="Ursula K. Le Guin" />
-      </div>
-      <div class="field">
-        <label for="book-pages-input" data-i18n="library.fieldTotalPages">Total pages</label>
-        <input type="number" id="book-pages-input" min="1" step="1" required placeholder="304" />
-      </div>
-      <div class="field">
-        <label for="book-isbn-input" data-i18n="library.fieldIsbn">ISBN (optional)</label>
-        <input type="text" id="book-isbn-input" maxlength="32" placeholder="978-3-16-148410-0" />
-      </div>
-      <div class="field">
-        <label data-i18n="library.fieldOwnership">Ownership</label>
-        <div class="ownership-toggle" id="ownership-toggle">
-          <button type="button" class="ownership-option" data-ownership="owned" data-i18n="library.ownedOption">Owned</button>
-          <button type="button" class="ownership-option" data-ownership="library" data-i18n="library.libraryOption">Library</button>
-        </div>
-        <p class="hint" data-i18n="library.ownershipHint">Mark it Library so you remember it isn't on your shelf anymore.</p>
-      </div>
-      <div class="field">
-        <label data-i18n="library.fieldCategories">Categories</label>
-        <div class="category-checklist" id="book-category-checklist"></div>
-      </div>
-      <div class="field rating-field hidden" id="book-rating-field">
-        <label data-i18n="library.fieldYourRating">Your rating</label>
-        <div class="star-picker" id="book-rating-picker"></div>
-      </div>
-      <div class="field reread-field hidden" id="book-reread-field">
-        <label data-i18n="reread.fieldLabel">Rereading</label>
-        <div class="reread-actions">
-          <button type="button" class="btn btn-secondary" id="book-reread-btn" data-i18n="reread.readAgain">Read again</button>
-          <button type="button" class="btn btn-secondary" id="book-reread-undo-btn" data-i18n="reread.undo">Undo reread</button>
-        </div>
-        <p class="hint" id="book-reread-hint"></p>
-      </div>
-      <p class="error-text" id="book-form-error"></p>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" id="book-modal-cancel" data-i18n="common.cancel">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="book-modal-submit" data-i18n="library.submitAdd">Add book</button>
-      </div>
-    </form>
+      <div class="book-modal-manual">
+        <p class="ol-manual-label" data-i18n="openlibrary.orManual">Or fill in the details by hand</p>
 
-    <div class="modal-footer-row hidden" id="book-modal-delete-row">
-      <button type="button" class="btn btn-danger" id="book-delete-btn" data-i18n="library.deleteBook">Delete book</button>
+        <form id="book-form" novalidate>
+          <div class="cover-upload">
+            <div class="cover-drop" id="cover-drop" role="button" tabindex="0" aria-label="Choose a cover image" data-i18n-aria-label="library.chooseCoverAria">
+              <span id="cover-drop-placeholder" data-i18n="library.noCover">No cover</span>
+              <img id="cover-preview" class="hidden" alt="" />
+            </div>
+            <div class="cover-upload-text">
+              <span data-i18n="library.coverHint">Upload a cover image (optional).</span>
+              <br />
+              <button type="button" id="cover-remove-btn" class="hidden" data-i18n="library.removeCover">Remove cover</button>
+            </div>
+            <input type="file" id="cover-input" accept="image/*" class="hidden" />
+          </div>
+
+          <div class="field">
+            <label for="book-title-input" data-i18n="library.fieldTitle">Title</label>
+            <input type="text" id="book-title-input" required maxlength="200" placeholder="The Left Hand of Darkness" />
+          </div>
+          <div class="field">
+            <label for="book-author-input" data-i18n="library.fieldAuthor">Author</label>
+            <input type="text" id="book-author-input" maxlength="200" placeholder="Ursula K. Le Guin" />
+          </div>
+          <div class="field field-half">
+            <label for="book-pages-input" data-i18n="library.fieldTotalPages">Total pages</label>
+            <input type="number" id="book-pages-input" min="1" step="1" required placeholder="304" />
+          </div>
+          <div class="field field-half">
+            <label for="book-isbn-input" data-i18n="library.fieldIsbn">ISBN (optional)</label>
+            <input type="text" id="book-isbn-input" maxlength="32" placeholder="978-3-16-148410-0" />
+          </div>
+          <div class="field">
+            <label data-i18n="library.fieldOwnership">Ownership</label>
+            <div class="ownership-toggle" id="ownership-toggle">
+              <button type="button" class="ownership-option" data-ownership="owned" data-i18n="library.ownedOption">Owned</button>
+              <button type="button" class="ownership-option" data-ownership="library" data-i18n="library.libraryOption">Library</button>
+            </div>
+            <p class="hint" data-i18n="library.ownershipHint">Mark it Library so you remember it isn't on your shelf anymore.</p>
+          </div>
+          <div class="field">
+            <label data-i18n="library.fieldCategories">Categories</label>
+            <div class="category-checklist" id="book-category-checklist"></div>
+          </div>
+          <div class="field rating-field hidden" id="book-rating-field">
+            <label data-i18n="library.fieldYourRating">Your rating</label>
+            <div class="star-picker" id="book-rating-picker"></div>
+          </div>
+          <div class="field reread-field hidden" id="book-reread-field">
+            <label data-i18n="reread.fieldLabel">Rereading</label>
+            <div class="reread-actions">
+              <button type="button" class="btn btn-secondary" id="book-reread-btn" data-i18n="reread.readAgain">Read again</button>
+              <button type="button" class="btn btn-secondary" id="book-reread-undo-btn" data-i18n="reread.undo">Undo reread</button>
+            </div>
+            <p class="hint" id="book-reread-hint"></p>
+          </div>
+          <p class="error-text" id="book-form-error"></p>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="book-modal-cancel" data-i18n="common.cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="book-modal-submit" data-i18n="library.submitAdd">Add book</button>
+          </div>
+        </form>
+
+        <div class="modal-footer-row hidden" id="book-modal-delete-row">
+          <button type="button" class="btn btn-danger" id="book-delete-btn" data-i18n="library.deleteBook">Delete book</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -220,6 +228,9 @@
       <button type="button" class="modal-close" id="wishlist-panel-close" aria-label="Close wishlist" data-i18n-aria-label="wishlist.closeAria">&times;</button>
     </div>
 
+    <div id="ol-wishlist-search"></div>
+    <p class="ol-manual-label" data-i18n="openlibrary.orManual">Or fill in the details by hand</p>
+
     <form id="wishlist-form" novalidate>
       <div class="cover-upload">
         <div class="cover-drop" id="wishlist-cover-drop" role="button" tabindex="0" aria-label="Choose a cover image" data-i18n-aria-label="wishlist.chooseCoverAria">
@@ -254,6 +265,8 @@
 <script src="js/fs.js"></script>
 <script src="js/store.js"></script>
 <script src="js/boot.js"></script>
+<script src="js/openlibrary.js"></script>
+<script src="js/olsearch.js"></script>
 <script src="js/library.js"></script>
 </body>
 </html>

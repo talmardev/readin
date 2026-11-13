@@ -313,6 +313,32 @@ RI.i18n.registerLanguage(
       removeCoverAria: "Remove cover for {title}",
     },
 
+    // Open Library search box (js/olsearch.js), shown in the Add Book modal
+    // and the wishlist panel.
+    openlibrary: {
+      searchLabel: "Find your book",
+      suggestionsTitle: "Suggestions",
+      placeholder: "Title, author or ISBN",
+      searchAria: "Search Open Library by title, author or ISBN",
+      clearAria: "Clear search",
+      hint: "Your search is sent to Open Library, which provides the results.",
+      orManual: "Or fill in the details by hand",
+      searching: "Searching…",
+      noResults: "No books found. Try another spelling, or fill in the details by hand.",
+      tooShort: "Type at least 3 characters.",
+      invalidIsbn: "That ISBN does not look valid. Check the digits.",
+      errOffline: "You are offline. Fill in the details by hand.",
+      errTimeout: "Open Library took too long to answer. Try again, or fill in the details by hand.",
+      errGeneric: "Could not reach Open Library. Try again, or fill in the details by hand.",
+      resultPages_one: "{n} page",
+      resultPages_other: "{n} pages",
+      gettingCover: "Getting the cover…",
+      pickedOk: "Details filled in below. Check them before saving.",
+      pickedNoPages: "Details filled in below. Add the page count before saving.",
+      noCover: "This book has no cover on Open Library.",
+      coverFailed: "The cover could not be downloaded.",
+    },
+
     goals: {
       sectionTitle: "Goals",
       setBtn: "Set goals",
