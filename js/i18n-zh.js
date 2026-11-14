@@ -41,6 +41,15 @@ RI.i18n.registerLanguage(
       footerNote: "readin' 只能在 Chrome 或 Edge 中使用，所有数据都保存在你的电脑上。",
     },
 
+    footer: {
+      githubAria: "readin' 的 GitHub 仓库",
+      aboutBefore: "Readin' 是一个开源项目，由 ",
+      aboutAfter:
+        " 创建并维护。如果你愿意，欢迎为 Readin' 做出贡献！请查看 GitHub 仓库，了解有关如何贡献的更多详情。",
+      licenseBefore: "© 2026 TalmarDEV。基于 ",
+      licenseAfter: " 许可发布。",
+    },
+
     nav: {
       library: "书库",
       stats: "统计",

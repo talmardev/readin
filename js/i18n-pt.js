@@ -41,6 +41,15 @@ RI.i18n.registerLanguage(
       footerNote: "A readin' só funciona no Chrome ou no Edge e mantém tudo no teu computador.",
     },
 
+    footer: {
+      githubAria: "readin' no GitHub",
+      aboutBefore: "A Readin' é um projeto de código aberto criado e mantido por ",
+      aboutAfter:
+        ". Podes contribuir para a Readin' se quiseres! Consulta o repositório do GitHub para mais detalhes sobre como contribuir.",
+      licenseBefore: "© 2026 TalmarDEV. Licenciado ao abrigo da ",
+      licenseAfter: ".",
+    },
+
     nav: {
       library: "Biblioteca",
       stats: "Estatísticas",

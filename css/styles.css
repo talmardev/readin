@@ -364,6 +364,110 @@ a {
   padding: 32px clamp(18px, 4vw, 48px) 96px;
 }
 
+/* keeps the footer at the bottom */
+#app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+#app-shell > .page-shell {
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.app-footer {
+  margin-top: auto;
+  padding: 28px clamp(18px, 4vw, 48px);
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+/* room for the wishlist corner pill */
+.app-footer.has-corner-widget {
+  padding-bottom: 76px;
+}
+
+.app-footer-inner {
+  display: flex;
+  align-items: center;
+  gap: 18px 40px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+/* margins crop the empty logo canvas */
+.footer-logo {
+  height: 48px;
+  width: auto;
+  max-width: none;
+  margin: -10px -11px;
+}
+
+.footer-github {
+  display: inline-flex;
+  margin-left: auto;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  transition: color 0.15s ease;
+}
+
+.footer-github:hover {
+  color: var(--ink);
+}
+
+.footer-about,
+.footer-copy {
+  margin: 0;
+}
+
+.footer-copy {
+  margin-top: 4px;
+}
+
+.footer-text a {
+  text-underline-offset: 2px;
+}
+
+.footer-text a:hover {
+  color: var(--green-deep-hover);
+}
+
+@media (max-width: 700px) {
+  .app-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .footer-github {
+    margin-left: -4px;
+  }
+}
+
+@media (max-width: 560px) {
+  #app-shell > .page-shell {
+    margin-bottom: 28px;
+  }
+
+  .app-footer {
+    padding: 24px 16px;
+  }
+
+  .app-footer.has-corner-widget {
+    padding-bottom: 76px;
+  }
+}
+
 .page-title-row {
   display: flex;
   align-items: baseline;
@@ -2849,6 +2953,7 @@ input[disabled] {
 
 /* the green logo needs more light */
 :root[data-theme="dark"] .brand-logo,
+:root[data-theme="dark"] .footer-logo,
 :root[data-theme="dark"] .setup-icon {
   filter: brightness(1.3);
 }
