@@ -50,6 +50,16 @@ RI.i18n.registerLanguage(
       licenseAfter: " 许可发布。",
     },
 
+    stale: {
+      title: "磁盘上的数据已变化",
+      text: "自这个页面加载以来，另一个标签页、窗口或同步工具修改了你的数据（{files}）。现在保存可能会覆盖这些更改。",
+      reloadNote: "重新加载会放弃未能保存的更改。",
+      reloadNoteSession: "重新加载会重新读取磁盘，并把你的阅读记录保存在其上。",
+      reloadBtn: "从磁盘重新加载",
+      overwriteBtn: "仍然覆盖",
+      reloadedToast: "已从磁盘重新加载数据。保存失败的更改没有被保存。",
+    },
+
     nav: {
       library: "书库",
       stats: "统计",
@@ -192,6 +202,20 @@ RI.i18n.registerLanguage(
       rateModalQuestion: "你给它打几分？",
       rateModalSkip: "以后再说",
       nudgeText: "喜欢还是讨厌？给它打个分吧。",
+
+      estimateBook_one: "按当前速度，大约还需 {n} 个阅读日读完。",
+      estimateBook_other: "按当前速度，大约还需 {n} 个阅读日读完。",
+      estimateOverall_one: "按你的整体速度，大约还需 {n} 个阅读日读完。",
+      estimateOverall_other: "按你的整体速度，大约还需 {n} 个阅读日读完。",
+
+      fieldDueDate: "归还日期",
+      dueDateHint: "可选。过去的日期会显示为已逾期。",
+      dueToday: "今天归还",
+      dueIn_one: "还剩 {n} 天",
+      dueIn_other: "还剩 {n} 天",
+      dueOverdue_one: "已逾期 {n} 天",
+      dueOverdue_other: "已逾期 {n} 天",
+      dueTitle: "请在 {date} 前归还",
     },
 
     streak: {
@@ -246,6 +270,16 @@ RI.i18n.registerLanguage(
       exportBtn: "将书库导出为 CSV",
       toastExported: "书库已导出为 CSV。",
       errCouldNotExportPrefix: "无法导出：",
+      backupBtn: "立即备份",
+      backupRunning: "正在备份…",
+      backupHintBeside: "备份保存在 data 旁边的 backups 文件夹中。要恢复备份，请手动把其中的文件复制回 data。",
+      backupHintInside: "备份保存在 data 内的 backups 文件夹中。要恢复备份，请手动把其中的文件复制回 data。",
+      backupLast_one: "上次备份：{date}（{n} 个文件）",
+      backupLast_other: "上次备份：{date}（{n} 个文件）",
+      backupNone: "还没有备份。",
+      toastBackup_one: "备份已保存到 backups/{folder}：{n} 个文件。",
+      toastBackup_other: "备份已保存到 backups/{folder}：{n} 个文件。",
+      errCouldNotBackupPrefix: "无法备份：",
     },
 
     read: {
@@ -291,6 +325,8 @@ RI.i18n.registerLanguage(
       savedSummary_other: "已为《{title}》记录 {n} 页。",
       readAnotherSession: "再读一次",
       backToLibrary: "返回书库",
+      titleMinutes: "{n} 分钟",
+      titleTimeUp: "时间到",
     },
 
     wishlist: {

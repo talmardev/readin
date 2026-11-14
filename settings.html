@@ -66,8 +66,15 @@
 
     <section class="settings-section">
       <h2 class="section-title" data-i18n="settings.dataSectionTitle">Data</h2>
-      <p class="hint" style="margin-bottom: 12px;" data-i18n="settings.exportHint">Export your library as a CSV file, one row per book.</p>
-      <button type="button" class="btn btn-secondary" id="export-csv-btn" data-i18n="settings.exportBtn">Export library as CSV</button>
+      <div class="settings-block">
+        <p class="hint" data-i18n="settings.exportHint">Export your library as a CSV file, one row per book.</p>
+        <button type="button" class="btn btn-secondary" id="export-csv-btn" data-i18n="settings.exportBtn">Export library as CSV</button>
+      </div>
+      <div class="settings-block">
+        <p class="hint" id="backup-hint"></p>
+        <button type="button" class="btn btn-secondary" id="backup-btn" data-i18n="settings.backupBtn">Back up now</button>
+        <p class="hint" id="backup-last"></p>
+      </div>
     </section>
   </main>
 

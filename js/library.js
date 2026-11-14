@@ -49,6 +49,8 @@
   const bookPagesInput = document.getElementById("book-pages-input");
   const bookIsbnInput = document.getElementById("book-isbn-input");
   const ownershipToggle = document.getElementById("ownership-toggle");
+  const bookDueField = document.getElementById("book-due-field");
+  const bookDueInput = document.getElementById("book-due-input");
   const bookCategoryChecklist = document.getElementById("book-category-checklist");
   const bookFormError = document.getElementById("book-form-error");
   const bookModalSubmit = document.getElementById("book-modal-submit");
@@ -65,6 +67,7 @@
 
   const logModalOverlay = document.getElementById("log-modal-overlay");
   const logModalBookEl = document.getElementById("log-modal-book");
+  const logEstimateEl = document.getElementById("log-estimate");
   const logFinishedNote = document.getElementById("log-finished-note");
   const logForm = document.getElementById("log-form");
   const logPagesInput = document.getElementById("log-pages-input");
@@ -128,7 +131,7 @@
 
   async function persist() {
     try {
-      await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
+      await RI.stale.run(() => fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library));
     } catch (err) {
       console.error(err);
       RI.toast(t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
@@ -137,7 +140,7 @@
 
   async function persistRatings() {
     try {
-      await fs.writeRatings(ctx.dataHandle, ctx.ratingsData);
+      await RI.stale.run(() => fs.writeRatings(ctx.dataHandle, ctx.ratingsData));
     } catch (err) {
       console.error(err);
       RI.toast(t("common.couldNotSaveRatingPrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
@@ -146,7 +149,7 @@
 
   async function persistWishlist() {
     try {
-      await fs.writeWishlist(ctx.dataHandle, ctx.wishlistData);
+      await RI.stale.run(() => fs.writeWishlist(ctx.dataHandle, ctx.wishlistData));
     } catch (err) {
       console.error(err);
       RI.toast(t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
@@ -451,6 +454,23 @@
       : t("reread.readNumber", { n });
   }
 
+  // return-by pill, null without a date
+  function buildDueBadge(book) {
+    const status = store.dueStatus(book, store.todayISODate());
+    if (!status) return null;
+    const pill = document.createElement("span");
+    pill.className = "due-badge is-" + status.state;
+    if (status.days < 0) {
+      pill.textContent = t("library.dueOverdue", { count: -status.days, n: -status.days });
+    } else if (status.days === 0) {
+      pill.textContent = t("library.dueToday");
+    } else {
+      pill.textContent = t("library.dueIn", { count: status.days, n: status.days });
+    }
+    pill.title = t("library.dueTitle", { date: formatDateDisplay(book.dueDate) });
+    return pill;
+  }
+
   async function buildBookCard(book) {
     const progress = store.progressForBook(ctx.library, book);
     const readToday = store.hasLogToday(ctx.library, book.id);
@@ -490,10 +510,15 @@
     coverWrap.appendChild(editBtn);
 
     if (book.ownership === "library") {
+      const badges = document.createElement("div");
+      badges.className = "cover-badges";
       const badge = document.createElement("span");
       badge.className = "ownership-badge";
       badge.textContent = t("library.libraryOption");
-      coverWrap.appendChild(badge);
+      badges.appendChild(badge);
+      const dueBadge = buildDueBadge(book);
+      if (dueBadge) badges.appendChild(dueBadge);
+      coverWrap.appendChild(badges);
     }
 
     if (readToday) {
@@ -725,6 +750,8 @@
     Array.from(ownershipToggle.querySelectorAll(".ownership-option")).forEach((btn) => {
       btn.classList.toggle("is-active", btn.dataset.ownership === value);
     });
+    // the date field follows the Library toggle
+    bookDueField.classList.toggle("hidden", value !== "library");
   }
 
   ownershipToggle.addEventListener("click", (e) => {
@@ -837,6 +864,7 @@
     bookAuthorInput.value = book.author || "";
     bookPagesInput.value = book.totalPages;
     bookIsbnInput.value = book.isbn || "";
+    bookDueInput.value = book.dueDate || "";
     const url = await resolveCoverUrl(book);
     setCoverPreview(url);
     setOwnership(book.ownership || null);
@@ -929,13 +957,20 @@
     return Array.from(counts, ([id, weight]) => ({ id, weight }));
   }
 
-  // only genres are sent, owned books dropped here
+  // isbn reduced to digits and X
+  function isbnKey(value) {
+    return String(value || "").replace(/[^0-9Xx]/g, "").toUpperCase();
+  }
+
+  // only genres are sent, known books dropped here
   function loadBookSuggestions() {
     const titles = new Set();
     const isbns = new Set();
-    ctx.library.books.forEach((book) => {
-      titles.add(matchKey(book.title));
-      if (book.isbn) isbns.add(String(book.isbn).replace(/[s-]/g, ""));
+    // shelf books and wishlist entries both count
+    ctx.library.books.concat(ctx.wishlistData.items).forEach((entry) => {
+      titles.add(matchKey(entry.title));
+      const isbn = isbnKey(entry.isbn);
+      if (isbn) isbns.add(isbn);
     });
     return RI.openlibrary.suggestions({
       genres: libraryGenres(),
@@ -943,7 +978,7 @@
       isOwned: (result) =>
         titles.has(matchKey(result.title)) ||
         titles.has(matchKey(result.workTitle)) ||
-        Boolean(result.isbn && isbns.has(result.isbn)),
+        Boolean(result.isbn && isbns.has(isbnKey(result.isbn))),
     });
   }
 
@@ -976,6 +1011,8 @@
     const totalPages = Number(bookPagesInput.value);
     const isbn = bookIsbnInput.value.trim();
     const ownership = pendingOwnership;
+    // cleared unless the book is Library
+    const dueDate = ownership === "library" ? bookDueInput.value || null : null;
     const categoryIds = selectedCategoryIds();
 
     if (!title) {
@@ -1004,7 +1041,7 @@
           if (oldCover && oldCover !== newPath) await fs.deleteCover(ctx.coversHandle, oldCover);
           store.updateBook(ctx.library, editingBookId, { coverFile: newPath });
         }
-        store.updateBook(ctx.library, editingBookId, { title, author, totalPages, isbn, ownership, categoryIds });
+        store.updateBook(ctx.library, editingBookId, { title, author, totalPages, isbn, ownership, dueDate, categoryIds });
       } else {
         const book = store.createBook(ctx.library, {
           title,
@@ -1013,6 +1050,7 @@
           coverFile: null,
           isbn,
           ownership,
+          dueDate,
           categoryIds,
         });
         if (pendingCoverFile) {
@@ -1147,10 +1185,21 @@
     });
   }
 
+  // forecast line, hidden when there is no basis
+  function renderLogEstimate(book) {
+    const estimate = store.estimateReadingDaysLeft(ctx.library, book.id);
+    logEstimateEl.classList.toggle("hidden", !estimate);
+    if (!estimate) return;
+    logEstimateEl.classList.toggle("is-overall", estimate.basis === "overall");
+    const key = estimate.basis === "book" ? "library.estimateBook" : "library.estimateOverall";
+    logEstimateEl.textContent = t(key, { count: estimate.days, n: estimate.days });
+  }
+
   // log form or finished note, by pages left
   function applyRemainingPagesState(book) {
     const progress = store.progressForBook(ctx.library, book);
     logModalPagesAlready = progress.pagesRead;
+    renderLogEstimate(book);
     const remaining = store.remainingPages(ctx.library, book);
     const finished = remaining <= 0;
     logFinishedNote.classList.toggle("hidden", !finished);

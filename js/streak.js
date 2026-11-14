@@ -416,8 +416,9 @@
 
     const next = RI.goals.buildGoals(daily.value, yearly.value);
     goalsModalSubmit.disabled = true;
+    let saved = false;
     try {
-      await fs.writeGoals(ctx.dataHandle, next);
+      saved = await RI.stale.run(() => fs.writeGoals(ctx.dataHandle, next));
     } catch (err) {
       console.error(err);
       goalsModalSubmit.disabled = false;
@@ -425,6 +426,8 @@
       return;
     }
     goalsModalSubmit.disabled = false;
+    // false means the page is reloading
+    if (!saved) return;
     goalsData = next;
     closeGoalsModal();
     renderGoalsSafe();

@@ -88,6 +88,38 @@ RI.store = (function () {
     return value === "owned" || value === "library" ? value : null;
   }
 
+  // a real YYYY-MM-DD, and only for library books
+  function normalizeDueDate(value, ownership) {
+    if (ownership !== "library" || typeof value !== "string") return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!m) return null;
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    const dt = new Date(y, mo - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d ? value : null;
+  }
+
+  // calendar days between dates, safe across DST
+  function daysBetweenISO(fromISO, toISO) {
+    const dayNumber = (iso) => {
+      const [y, m, d] = iso.split("-").map(Number);
+      return Date.UTC(y, m - 1, d) / 86400000;
+    };
+    return Math.round(dayNumber(toISO) - dayNumber(fromISO));
+  }
+
+  // this many days or fewer is near
+  const DUE_SOON_DAYS = 5;
+
+  // days left and state, or null
+  function dueStatus(book, todayISO) {
+    if (!book || book.ownership !== "library" || !book.dueDate) return null;
+    const days = daysBetweenISO(todayISO || todayISODate(), book.dueDate);
+    const state = days < 0 ? "overdue" : days <= DUE_SOON_DAYS ? "soon" : "ok";
+    return { days, state };
+  }
+
   // missing or invalid means first read
   function currentCycle(book) {
     const n = Math.floor(Number(book && book.readCount));
@@ -100,14 +132,16 @@ RI.store = (function () {
     return n >= 1 ? n : 1;
   }
 
-  function createBook(library, { title, author, totalPages, coverFile, ownership, isbn, categoryIds }) {
+  function createBook(library, { title, author, totalPages, coverFile, ownership, dueDate, isbn, categoryIds }) {
+    const ownershipValue = normalizeOwnership(ownership);
     const book = {
       id: generateId(),
       title: title.trim(),
       author: (author || "").trim(),
       totalPages: Math.max(1, Math.round(Number(totalPages) || 0)),
       coverFile: coverFile || null,
-      ownership: normalizeOwnership(ownership),
+      ownership: ownershipValue,
+      dueDate: normalizeDueDate(dueDate, ownershipValue),
       isbn: (isbn || "").trim() || null,
       categoryIds: Array.isArray(categoryIds) ? categoryIds.slice() : [],
       readCount: 1,
@@ -118,13 +152,15 @@ RI.store = (function () {
   }
 
   function normalizeBook(b) {
+    const ownershipValue = normalizeOwnership(b.ownership);
     return {
       id: b.id,
       title: b.title,
       author: b.author,
       totalPages: b.totalPages,
       coverFile: b.coverFile || null,
-      ownership: normalizeOwnership(b.ownership),
+      ownership: ownershipValue,
+      dueDate: normalizeDueDate(b.dueDate, ownershipValue),
       isbn: b.isbn || null,
       categoryIds: Array.isArray(b.categoryIds) ? b.categoryIds : [],
       readCount: currentCycle(b),
@@ -146,6 +182,9 @@ RI.store = (function () {
     }
     if (patch.coverFile !== undefined) book.coverFile = patch.coverFile;
     if (patch.ownership !== undefined) book.ownership = normalizeOwnership(patch.ownership);
+    if (patch.dueDate !== undefined) book.dueDate = patch.dueDate;
+    // the date only lives with library books
+    book.dueDate = normalizeDueDate(book.dueDate, book.ownership);
     if (patch.isbn !== undefined) book.isbn = (patch.isbn || "").trim() || null;
     if (patch.categoryIds !== undefined) {
       book.categoryIds = Array.isArray(patch.categoryIds) ? patch.categoryIds.slice() : [];
@@ -374,6 +413,46 @@ RI.store = (function () {
     return library.logs.reduce((sum, l) => sum + (Number(l.pagesRead) || 0), 0);
   }
 
+  // longer than this is noise, not a forecast
+  const MAX_ESTIMATE_DAYS = 365;
+
+  // whole days at a pace, integer maths
+  function daysAtPace(remaining, pages, days) {
+    if (!(remaining > 0) || !(pages > 0) || !(days > 0)) return null;
+    return Math.max(1, Math.ceil((remaining * days) / pages));
+  }
+
+  // reading days left, not calendar days
+  function estimateReadingDaysLeft(library, bookId) {
+    const book = getBookById(library, bookId);
+    if (!book) return null;
+    const remaining = remainingPages(library, book);
+    if (remaining <= 0) return null;
+
+    // own pace this read-through, dated logs only
+    const bookDays = new Set();
+    let bookPages = 0;
+    logsForCurrentCycle(library, bookId).forEach((log) => {
+      if (log.isPastRead || !log.date) return;
+      bookDays.add(log.date);
+      bookPages += Number(log.pagesRead) || 0;
+    });
+    let days = null;
+    let basis = "book";
+    if (bookDays.size >= 2) days = daysAtPace(remaining, bookPages, bookDays.size);
+
+    if (days === null) {
+      // fall back to the stats pace
+      const perDay = pagesPerDay(library);
+      let total = 0;
+      perDay.forEach((v) => (total += v));
+      days = daysAtPace(remaining, total, perDay.size);
+      basis = "overall";
+    }
+    if (days === null || days > MAX_ESTIMATE_DAYS) return null;
+    return { days, basis };
+  }
+
   function isBookFinished(library, book) {
     return remainingPages(library, book) <= 0 && progressForBook(library, book).pagesRead > 0;
   }
@@ -577,6 +656,7 @@ RI.store = (function () {
       "Categories",
       "Date Added",
       "Times Read",
+      "Due Date",
     ];
     const timesRead = new Map();
     completedReads(library).forEach((r) => timesRead.set(r.bookId, (timesRead.get(r.bookId) || 0) + 1));
@@ -598,6 +678,7 @@ RI.store = (function () {
         categories,
         book.createdAt ? book.createdAt.slice(0, 10) : "",
         timesRead.get(book.id) || 0,
+        book.dueDate || "",
       ];
     });
     return [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n") + "\r\n";
@@ -677,6 +758,8 @@ RI.store = (function () {
     getBookById,
     updateBook,
     deleteBook,
+    dueStatus,
+    daysBetweenISO,
 
     addLog,
     deleteLog,
@@ -705,6 +788,7 @@ RI.store = (function () {
     pagesPerDay,
     datedLogDateSet,
     totalPagesRead,
+    estimateReadingDaysLeft,
     isBookFinished,
     booksReadCount,
     averageDaysToComplete,

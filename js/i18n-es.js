@@ -50,6 +50,16 @@ RI.i18n.registerLanguage(
       licenseAfter: ".",
     },
 
+    stale: {
+      title: "Tus datos cambiaron en el disco",
+      text: "Otra pestaña, ventana o herramienta de sincronización modificó tus datos desde que se abrió esta página ({files}). Guardar ahora podría borrar esos cambios.",
+      reloadNote: "Recargar descarta el cambio que no se pudo guardar.",
+      reloadNoteSession: "Recargar vuelve a leer el disco y guarda tu sesión de lectura encima.",
+      reloadBtn: "Recargar desde el disco",
+      overwriteBtn: "Sobrescribir de todos modos",
+      reloadedToast: "Datos recargados desde el disco. El cambio que falló no se guardó.",
+    },
+
     nav: {
       library: "Biblioteca",
       stats: "Estadísticas",
@@ -192,6 +202,20 @@ RI.i18n.registerLanguage(
       rateModalQuestion: "¿Qué nota le das?",
       rateModalSkip: "Quizá más tarde",
       nudgeText: "¿Te gustó? ¿Lo odiaste? Valóralo.",
+
+      estimateBook_one: "A este ritmo terminarás en unos {n} día de lectura.",
+      estimateBook_other: "A este ritmo terminarás en unos {n} días de lectura.",
+      estimateOverall_one: "A tu ritmo general terminarías en unos {n} día de lectura.",
+      estimateOverall_other: "A tu ritmo general terminarías en unos {n} días de lectura.",
+
+      fieldDueDate: "Devolver antes del",
+      dueDateHint: "Opcional. Una fecha pasada se muestra como atrasado.",
+      dueToday: "Devolver hoy",
+      dueIn_one: "Queda {n} día",
+      dueIn_other: "Quedan {n} días",
+      dueOverdue_one: "{n} día de retraso",
+      dueOverdue_other: "{n} días de retraso",
+      dueTitle: "Devolver antes del {date}",
     },
 
     streak: {
@@ -246,6 +270,16 @@ RI.i18n.registerLanguage(
       exportBtn: "Exportar biblioteca como CSV",
       toastExported: "Biblioteca exportada a CSV.",
       errCouldNotExportPrefix: "No se pudo exportar: ",
+      backupBtn: "Hacer copia ahora",
+      backupRunning: "Haciendo copia…",
+      backupHintBeside: "Las copias se guardan en la carpeta backups, junto a data. Para restaurar una, copia sus archivos de vuelta a data a mano.",
+      backupHintInside: "Las copias se guardan en la carpeta backups, dentro de data. Para restaurar una, copia sus archivos de vuelta a data a mano.",
+      backupLast_one: "Última copia: {date} ({n} archivo)",
+      backupLast_other: "Última copia: {date} ({n} archivos)",
+      backupNone: "Todavía no hay copias.",
+      toastBackup_one: "Copia guardada en backups/{folder}: {n} archivo.",
+      toastBackup_other: "Copia guardada en backups/{folder}: {n} archivos.",
+      errCouldNotBackupPrefix: "No se pudo hacer la copia: ",
     },
 
     read: {
@@ -291,6 +325,8 @@ RI.i18n.registerLanguage(
       savedSummary_other: 'Registradas {n} páginas de "{title}".',
       readAnotherSession: "Leer otra sesión",
       backToLibrary: "Volver a la biblioteca",
+      titleMinutes: "{n} min",
+      titleTimeUp: "Tiempo agotado",
     },
 
     wishlist: {

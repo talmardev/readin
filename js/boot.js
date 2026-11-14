@@ -1,5 +1,134 @@
 window.RI = window.RI || {};
 
+// stale data dialog, shared by every saver
+RI.stale = (function () {
+  "use strict";
+
+  const t = RI.i18n.t;
+  const RELOADED_KEY = "readin-stale-reloaded";
+  let redraw = null;
+  let queue = Promise.resolve();
+
+  RI.i18n.onChange(() => {
+    if (redraw) redraw();
+  });
+
+  function makeButton(className) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn " + className;
+    return btn;
+  }
+
+  // resolves reload or overwrite, one at a time
+  function ask(err, reloadNoteKey) {
+    const result = queue.then(
+      () =>
+        new Promise((resolve) => {
+          const overlay = document.createElement("div");
+          overlay.className = "modal-overlay";
+          const modal = document.createElement("div");
+          modal.className = "modal";
+          modal.setAttribute("role", "alertdialog");
+          modal.setAttribute("aria-modal", "true");
+          modal.setAttribute("aria-labelledby", "stale-modal-title");
+
+          const header = document.createElement("div");
+          header.className = "modal-header";
+          const title = document.createElement("h2");
+          title.className = "modal-title";
+          title.id = "stale-modal-title";
+          header.appendChild(title);
+
+          const text = document.createElement("p");
+          text.className = "stale-text";
+          const note = document.createElement("p");
+          note.className = "hint";
+
+          const actions = document.createElement("div");
+          actions.className = "modal-actions";
+          const reloadBtn = makeButton("btn-primary");
+          const overwriteBtn = makeButton("btn-danger");
+          actions.appendChild(reloadBtn);
+          actions.appendChild(overwriteBtn);
+
+          function render() {
+            title.textContent = t("stale.title");
+            text.textContent = t("stale.text", { files: err.files.join(", ") });
+            note.textContent = t(reloadNoteKey || "stale.reloadNote");
+            reloadBtn.textContent = t("stale.reloadBtn");
+            overwriteBtn.textContent = t("stale.overwriteBtn");
+          }
+
+          function choose(choice) {
+            redraw = null;
+            overlay.remove();
+            resolve(choice);
+          }
+          reloadBtn.addEventListener("click", () => choose("reload"));
+          overwriteBtn.addEventListener("click", () => choose("overwrite"));
+
+          modal.appendChild(header);
+          modal.appendChild(text);
+          modal.appendChild(note);
+          modal.appendChild(actions);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+          redraw = render;
+          render();
+          reloadBtn.focus();
+        })
+    );
+    queue = result.catch(() => {});
+    return result;
+  }
+
+  // reload the page and say what was dropped
+  function reloadPage() {
+    try {
+      sessionStorage.setItem(RELOADED_KEY, "1");
+    } catch (err) {
+      console.error(err);
+    }
+    location.reload();
+  }
+
+  // guarded write, false when user reloads
+  async function run(write, options) {
+    const opts = options || {};
+    for (;;) {
+      try {
+        await write();
+        return true;
+      } catch (err) {
+        if (!RI.fs.isStaleError(err)) throw err;
+        const choice = await ask(err, opts.reloadNoteKey);
+        if (choice === "overwrite") {
+          await RI.fs.acceptDiskState(err.dataHandle, err.files);
+          continue;
+        }
+        if (opts.onReload) await opts.onReload(err);
+        else reloadPage();
+        return false;
+      }
+    }
+  }
+
+  // toast once after a reload this dialog caused
+  function announceReload() {
+    let flagged = false;
+    try {
+      flagged = sessionStorage.getItem(RELOADED_KEY) === "1";
+      sessionStorage.removeItem(RELOADED_KEY);
+    } catch (err) {
+      console.error(err);
+    }
+    if (flagged) RI.toast(t("stale.reloadedToast"));
+  }
+
+  return { run, announceReload };
+})();
+
 RI.boot = function (onReady) {
   "use strict";
 
@@ -60,6 +189,7 @@ RI.boot = function (onReady) {
       screen.classList.add("hidden");
       appShell.classList.remove("hidden");
       onReady({ library, dataHandle, coversHandle, rootHandle, ratingsData, wishlistData });
+      RI.stale.announceReload();
     } catch (err) {
       console.error(err);
       showError(t("setup.errCouldNotRead") + (err && err.message ? err.message : ""));

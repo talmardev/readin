@@ -15,6 +15,8 @@
   let selectedMode = "countdown"; // "countdown" | "stopwatch"
   let session = null; // the active timer session
   let tickTimer = null;
+  // set when a countdown ends hidden
+  let timeUpWhileHidden = false;
 
   let pickerCoverUrls = [];
   let selectedBookCoverUrl = null;
@@ -70,6 +72,8 @@
   // pages already logged, the stopped-at offset
   let finishedPagesAlready = 0;
   let finishedLastEditedStopped = false;
+  // set once this session's log is on disk
+  let finishedLogId = null;
 
   const RADIUS = timerRingProgress.r.baseVal.value; // derived from the SVG, not hand-copied
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -87,6 +91,7 @@
     Object.keys(stepEls).forEach((key) => {
       stepEls[key].classList.toggle("hidden", key !== name);
     });
+    updateDocTitle();
   }
 
   function saveSessionToStorage() {
@@ -401,6 +406,25 @@
     pauseBtn.classList.toggle("btn-primary", isPaused);
     pauseBtn.classList.toggle("btn-secondary", !isPaused);
     timerStateEl.textContent = isPaused ? t("read.timerStatePaused") : t("read.timerStateReading");
+    updateDocTitle();
+  }
+
+  // one place decides the tab title
+  function computeDocTitle(now) {
+    if (timeUpWhileHidden && document.hidden) return t("read.titleTimeUp") + " · readin'";
+    if (!session || stepEls.timer.classList.contains("hidden")) return "readin' - " + t("nav.read");
+    const stopwatch = session.mode === "stopwatch";
+    const ms = stopwatch ? activeMs(now) : Math.max(0, remainingMs(now));
+    // hidden tabs tick slowly, so show minutes
+    const clock = document.hidden
+      ? t("read.titleMinutes", { n: stopwatch ? Math.floor(ms / 60000) : Math.ceil(ms / 60000) })
+      : formatMMSS(ms);
+    return session.pauseStartedAt ? clock + " · " + t("read.timerStatePaused") : clock + " · readin'";
+  }
+
+  function updateDocTitle(now) {
+    const title = computeDocTitle(now || Date.now());
+    if (document.title !== title) document.title = title;
   }
 
   function tick() {
@@ -408,10 +432,12 @@
     if (session.mode === "stopwatch") {
       // stopwatch ring stays lit, only Stop ends it
       timerTimeEl.textContent = formatMMSS(activeMs(now));
+      updateDocTitle(now);
       return;
     }
     const rem = remainingMs(now);
     updateRingAndTime(Math.max(0, rem));
+    updateDocTitle(now);
     if (!session.pauseStartedAt && rem <= 0) {
       finishSession(false, now);
     }
@@ -459,6 +485,8 @@
   // step: finished
 
   async function finishSession(endedEarly, now) {
+    timeUpWhileHidden = !endedEarly && document.hidden;
+    finishedLogId = null;
     if (tickTimer) {
       clearInterval(tickTimer);
       tickTimer = null;
@@ -546,7 +574,7 @@
 
   async function persistRatings() {
     try {
-      await fs.writeRatings(ctx.dataHandle, ctx.ratingsData);
+      await RI.stale.run(() => fs.writeRatings(ctx.dataHandle, ctx.ratingsData));
     } catch (err) {
       console.error(err);
       RI.toast(t("common.couldNotSaveRatingPrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
@@ -663,44 +691,73 @@
     closeRateModal();
   });
 
-  finishedForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // re-read the files, keep the timed session
+  async function reloadDataFromDisk() {
+    const { library: base, logs } = await fs.readLibraryAndLogs(ctx.dataHandle);
+    ctx.library = { books: base.books, categories: base.categories, logs };
+    ctx.ratingsData = await fs.readRatings(ctx.dataHandle);
+    readsData = await fs.readReads(ctx.dataHandle);
+  }
+
+  // reload, then save on top
+  async function reloadThenSave() {
+    try {
+      await reloadDataFromDisk();
+    } catch (err) {
+      console.error(err);
+      finishedFormError.textContent = t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError"));
+      return;
+    }
+    await saveFinishedSession();
+  }
+
+  const staleOptions = { reloadNoteKey: "stale.reloadNoteSession", onReload: reloadThenSave };
+
+  // safe to call again after a reload
+  async function saveFinishedSession() {
     const book = store.getBookById(ctx.library, session.bookId);
-    if (!book) {
-      finishedFormError.textContent = t("read.errBookGone");
-      return;
-    }
     const pages = Number(finishedPagesInput.value);
-    if (!pages || pages < 1) {
-      finishedFormError.textContent = finishedLastEditedStopped
-        ? t("read.errStoppedMustBePast")
-        : t("read.errEnterAtLeast1Page");
-      return;
-    }
-    const remaining = store.remainingPages(ctx.library, book);
-    if (remaining <= 0) {
-      finishedFormError.textContent = t("read.errAlreadyFinished");
-      return;
-    }
-    if (pages > remaining) {
-      finishedFormError.textContent = t("read.errOnlyNPagesLeft", { count: remaining, n: remaining });
-      return;
+    // checks only apply before the log exists
+    if (!finishedLogId) {
+      if (!book) {
+        finishedFormError.textContent = t("read.errBookGone");
+        return;
+      }
+      if (!pages || pages < 1) {
+        finishedFormError.textContent = finishedLastEditedStopped
+          ? t("read.errStoppedMustBePast")
+          : t("read.errEnterAtLeast1Page");
+        return;
+      }
+      const remaining = store.remainingPages(ctx.library, book);
+      if (remaining <= 0) {
+        finishedFormError.textContent = t("read.errAlreadyFinished");
+        return;
+      }
+      if (pages > remaining) {
+        finishedFormError.textContent = t("read.errOnlyNPagesLeft", { count: remaining, n: remaining });
+        return;
+      }
     }
     finishedFormError.textContent = "";
     finishedSaveBtn.disabled = true;
 
+    let readRow = null;
     try {
-      const log = store.addLog(ctx.library, {
-        bookId: session.bookId,
-        pagesRead: pages,
-        date: store.todayISODate(),
-        isPastRead: false,
-      });
-      await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
+      if (!finishedLogId) {
+        const log = store.addLog(ctx.library, {
+          bookId: session.bookId,
+          pagesRead: pages,
+          date: store.todayISODate(),
+          isPastRead: false,
+        });
+        if (!(await RI.stale.run(() => fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library), staleOptions))) return;
+        finishedLogId = log.id;
+      }
 
-      store.createReadSession(readsData, {
+      readRow = store.createReadSession(readsData, {
         bookId: session.bookId,
-        logId: log.id,
+        logId: finishedLogId,
         mode: session.mode,
         plannedMinutes: session.plannedMinutes,
         startedAt: session.startedAt,
@@ -710,10 +767,15 @@
         endedEarly: session.endedEarly,
         pagesRead: pages,
       });
-      await fs.writeReads(ctx.dataHandle, readsData);
+      if (!(await RI.stale.run(() => fs.writeReads(ctx.dataHandle, readsData), staleOptions))) return;
 
+      finishedLogId = null;
       clearSessionStorage();
-      const summary = t("read.savedSummary", { count: pages, n: pages, title: book.title });
+      const summary = t("read.savedSummary", {
+        count: pages,
+        n: pages,
+        title: book ? book.title : t("streak.rowDeletedBook"),
+      });
       const bookId = session.bookId;
       session = null;
 
@@ -730,10 +792,18 @@
       showStep("saved");
     } catch (err) {
       console.error(err);
+      // a retry must not push the row twice
+      const rowIdx = readRow ? readsData.reads.indexOf(readRow) : -1;
+      if (rowIdx !== -1) readsData.reads.splice(rowIdx, 1);
       finishedFormError.textContent = t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError"));
     } finally {
       finishedSaveBtn.disabled = false;
     }
+  }
+
+  finishedForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    saveFinishedSession();
   });
 
   savedReadAgainBtn.addEventListener("click", async () => {
@@ -744,12 +814,15 @@
 
   // Boot
 
-  function setDocTitle() {
-    document.title = "readin' - " + t("nav.read");
-  }
+  // catch up at once, background timers lag
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) timeUpWhileHidden = false;
+    if (tickTimer) tick();
+    else updateDocTitle();
+  });
 
   RI.i18n.onChange(async () => {
-    setDocTitle();
+    updateDocTitle();
     if (!ctx) return;
     // re-render the visible step on language change
     if (!stepEls.book.classList.contains("hidden")) await renderBookPicker();
@@ -762,7 +835,7 @@
 
   RI.boot(async (bootCtx) => {
     ctx = bootCtx;
-    setDocTitle();
+    updateDocTitle();
     readsData = await fs.readReads(ctx.dataHandle);
 
     const saved = loadSessionFromStorage();

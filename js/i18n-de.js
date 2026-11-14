@@ -50,6 +50,16 @@ RI.i18n.registerLanguage(
       licenseAfter: ".",
     },
 
+    stale: {
+      title: "Deine Daten haben sich auf dem Datenträger geändert",
+      text: "Ein anderer Tab, ein anderes Fenster oder ein Sync-Tool hat deine Daten verändert, seit diese Seite geladen wurde ({files}). Wenn du jetzt speicherst, gehen diese Änderungen eventuell verloren.",
+      reloadNote: "Neu laden verwirft die Änderung, die nicht gespeichert werden konnte.",
+      reloadNoteSession: "Neu laden liest den Datenträger erneut ein und speichert deine Lesesitzung obendrauf.",
+      reloadBtn: "Vom Datenträger neu laden",
+      overwriteBtn: "Trotzdem überschreiben",
+      reloadedToast: "Daten vom Datenträger neu geladen. Die fehlgeschlagene Änderung wurde nicht gespeichert.",
+    },
+
     nav: {
       library: "Bibliothek",
       stats: "Statistik",
@@ -192,6 +202,20 @@ RI.i18n.registerLanguage(
       rateModalQuestion: "Wie bewertest du es?",
       rateModalSkip: "Vielleicht später",
       nudgeText: "Gefallen? Gehasst? Bewerte es.",
+
+      estimateBook_one: "In diesem Tempo bist du in etwa {n} Lesetag fertig.",
+      estimateBook_other: "In diesem Tempo bist du in etwa {n} Lesetagen fertig.",
+      estimateOverall_one: "In deinem Gesamttempo wärst du in etwa {n} Lesetag fertig.",
+      estimateOverall_other: "In deinem Gesamttempo wärst du in etwa {n} Lesetagen fertig.",
+
+      fieldDueDate: "Rückgabe bis",
+      dueDateHint: "Optional. Ein Datum in der Vergangenheit wird als überfällig angezeigt.",
+      dueToday: "Heute zurückgeben",
+      dueIn_one: "Noch {n} Tag",
+      dueIn_other: "Noch {n} Tage",
+      dueOverdue_one: "{n} Tag überfällig",
+      dueOverdue_other: "{n} Tage überfällig",
+      dueTitle: "Rückgabe bis {date}",
     },
 
     streak: {
@@ -246,6 +270,16 @@ RI.i18n.registerLanguage(
       exportBtn: "Bibliothek als CSV exportieren",
       toastExported: "Bibliothek als CSV exportiert.",
       errCouldNotExportPrefix: "Export nicht möglich: ",
+      backupBtn: "Jetzt sichern",
+      backupRunning: "Sicherung läuft…",
+      backupHintBeside: "Sicherungen landen im Ordner backups neben data. Zum Wiederherstellen kopierst du die Dateien einer Sicherung von Hand zurück nach data.",
+      backupHintInside: "Sicherungen landen im Ordner backups innerhalb von data. Zum Wiederherstellen kopierst du die Dateien einer Sicherung von Hand zurück nach data.",
+      backupLast_one: "Letzte Sicherung: {date} ({n} Datei)",
+      backupLast_other: "Letzte Sicherung: {date} ({n} Dateien)",
+      backupNone: "Noch keine Sicherung vorhanden.",
+      toastBackup_one: "Sicherung in backups/{folder} gespeichert: {n} Datei.",
+      toastBackup_other: "Sicherung in backups/{folder} gespeichert: {n} Dateien.",
+      errCouldNotBackupPrefix: "Sicherung nicht möglich: ",
     },
 
     read: {
@@ -291,6 +325,8 @@ RI.i18n.registerLanguage(
       savedSummary_other: '{n} Seiten für "{title}" eingetragen.',
       readAnotherSession: "Noch eine Sitzung lesen",
       backToLibrary: "Zurück zur Bibliothek",
+      titleMinutes: "{n} Min.",
+      titleTimeUp: "Zeit abgelaufen",
     },
 
     wishlist: {

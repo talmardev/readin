@@ -130,6 +130,11 @@
             </div>
             <p class="hint" data-i18n="library.ownershipHint">Mark it Library so you remember it isn't on your shelf anymore.</p>
           </div>
+          <div class="field hidden" id="book-due-field">
+            <label for="book-due-input" data-i18n="library.fieldDueDate">Return by</label>
+            <input type="date" id="book-due-input" />
+            <p class="hint" data-i18n="library.dueDateHint">Optional. A date in the past shows as overdue.</p>
+          </div>
           <div class="field">
             <label data-i18n="library.fieldCategories">Categories</label>
             <div class="category-checklist" id="book-category-checklist"></div>
@@ -169,6 +174,7 @@
     </div>
 
     <div class="log-modal-book" id="log-modal-book"></div>
+    <p class="log-estimate hidden" id="log-estimate"></p>
 
     <div class="finished-note hidden" id="log-finished-note">
       <p class="reread-note-text" data-i18n="library.finishedNote">This book is finished, so logging is closed unless you delete a log below.</p>

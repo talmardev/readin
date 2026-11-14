@@ -50,6 +50,16 @@ RI.i18n.registerLanguage(
       licenseAfter: ".",
     },
 
+    stale: {
+      title: "Tes données ont changé sur le disque",
+      text: "Un autre onglet, une autre fenêtre ou un outil de synchronisation a modifié tes données depuis l'ouverture de cette page ({files}). Enregistrer maintenant pourrait effacer ces modifications.",
+      reloadNote: "Recharger abandonne la modification qui n'a pas pu être enregistrée.",
+      reloadNoteSession: "Recharger relit le disque et enregistre ta session de lecture par-dessus.",
+      reloadBtn: "Recharger depuis le disque",
+      overwriteBtn: "Écraser quand même",
+      reloadedToast: "Données rechargées depuis le disque. La modification qui a échoué n'a pas été enregistrée.",
+    },
+
     nav: {
       library: "Bibliothèque",
       stats: "Stats",
@@ -192,6 +202,20 @@ RI.i18n.registerLanguage(
       rateModalQuestion: "Quelle note lui donnes-tu ?",
       rateModalSkip: "Peut-être plus tard",
       nudgeText: "Aimé ? Pas aimé ? Note-le.",
+
+      estimateBook_one: "À ce rythme, tu auras fini dans environ {n} jour de lecture.",
+      estimateBook_other: "À ce rythme, tu auras fini dans environ {n} jours de lecture.",
+      estimateOverall_one: "À ton rythme général, tu auras fini dans environ {n} jour de lecture.",
+      estimateOverall_other: "À ton rythme général, tu auras fini dans environ {n} jours de lecture.",
+
+      fieldDueDate: "À rendre le",
+      dueDateHint: "Facultatif. Une date passée s'affiche comme en retard.",
+      dueToday: "À rendre aujourd'hui",
+      dueIn_one: "{n} jour restant",
+      dueIn_other: "{n} jours restants",
+      dueOverdue_one: "En retard de {n} jour",
+      dueOverdue_other: "En retard de {n} jours",
+      dueTitle: "À rendre le {date}",
     },
 
     streak: {
@@ -246,6 +270,16 @@ RI.i18n.registerLanguage(
       exportBtn: "Exporter la bibliothèque en CSV",
       toastExported: "Bibliothèque exportée en CSV.",
       errCouldNotExportPrefix: "Impossible d'exporter : ",
+      backupBtn: "Sauvegarder maintenant",
+      backupRunning: "Sauvegarde en cours…",
+      backupHintBeside: "Les sauvegardes vont dans le dossier backups, à côté de data. Pour en restaurer une, copie ses fichiers dans data à la main.",
+      backupHintInside: "Les sauvegardes vont dans le dossier backups, à l'intérieur de data. Pour en restaurer une, copie ses fichiers dans data à la main.",
+      backupLast_one: "Dernière sauvegarde : {date} ({n} fichier)",
+      backupLast_other: "Dernière sauvegarde : {date} ({n} fichiers)",
+      backupNone: "Aucune sauvegarde pour l'instant.",
+      toastBackup_one: "Sauvegarde enregistrée dans backups/{folder} : {n} fichier.",
+      toastBackup_other: "Sauvegarde enregistrée dans backups/{folder} : {n} fichiers.",
+      errCouldNotBackupPrefix: "Impossible de sauvegarder : ",
     },
 
     read: {
@@ -291,6 +325,8 @@ RI.i18n.registerLanguage(
       savedSummary_other: '{n} pages enregistrées pour "{title}".',
       readAnotherSession: "Lire une autre session",
       backToLibrary: "Retour à la bibliothèque",
+      titleMinutes: "{n} min",
+      titleTimeUp: "Temps écoulé",
     },
 
     wishlist: {

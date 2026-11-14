@@ -16,10 +16,18 @@
   const categoryFormError = document.getElementById("category-form-error");
   const categoryGroups = document.getElementById("category-groups");
   const exportCsvBtn = document.getElementById("export-csv-btn");
+  const backupBtn = document.getElementById("backup-btn");
+  const backupHint = document.getElementById("backup-hint");
+  const backupLastEl = document.getElementById("backup-last");
+
+  // beside data, or inside if data was picked
+  let backupLocation = "beside";
+  let lastBackup = null;
+  let backupRunning = false;
 
   async function persist() {
     try {
-      await fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library);
+      await RI.stale.run(() => fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library));
     } catch (err) {
       console.error(err);
       RI.toast(t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
@@ -118,18 +126,60 @@
     }
   });
 
+  function renderBackupInfo() {
+    backupHint.textContent = t(backupLocation === "inside" ? "settings.backupHintInside" : "settings.backupHintBeside");
+    backupBtn.textContent = t(backupRunning ? "settings.backupRunning" : "settings.backupBtn");
+    if (!lastBackup) {
+      backupLastEl.textContent = t("settings.backupNone");
+      return;
+    }
+    const date = new Date(lastBackup.createdAt).toLocaleString(RI.i18n.getLocale(), {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+    backupLastEl.textContent = t("settings.backupLast", { count: lastBackup.fileCount, n: lastBackup.fileCount, date });
+  }
+
+  backupBtn.addEventListener("click", async () => {
+    backupRunning = true;
+    backupBtn.disabled = true;
+    renderBackupInfo();
+    try {
+      const result = await fs.makeBackup(ctx.rootHandle, ctx.dataHandle, ctx.coversHandle);
+      lastBackup = { createdAt: result.createdAt, fileCount: result.fileCount };
+      RI.toast(t("settings.toastBackup", { count: result.fileCount, n: result.fileCount, folder: result.folder }));
+    } catch (err) {
+      console.error(err);
+      RI.toast(t("settings.errCouldNotBackupPrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
+    } finally {
+      backupRunning = false;
+      backupBtn.disabled = false;
+      renderBackupInfo();
+    }
+  });
+
   function setDocTitle() {
     document.title = "readin' - " + t("nav.settings");
   }
 
   RI.i18n.onChange(() => {
     setDocTitle();
-    if (ctx) renderCategoryGroups();
+    if (ctx) {
+      renderCategoryGroups();
+      renderBackupInfo();
+    }
   });
 
-  RI.boot((bootCtx) => {
+  RI.boot(async (bootCtx) => {
     ctx = bootCtx;
     setDocTitle();
     renderCategoryGroups();
+    try {
+      backupLocation = await fs.backupLocation(ctx.rootHandle, ctx.dataHandle);
+      lastBackup = await fs.lastValidBackup(ctx.rootHandle, ctx.dataHandle);
+    } catch (err) {
+      console.error(err);
+    }
+    renderBackupInfo();
   });
 })();

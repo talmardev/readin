@@ -50,6 +50,16 @@ RI.i18n.registerLanguage(
       licenseAfter: ".",
     },
 
+    stale: {
+      title: "Your data changed on disk",
+      text: "Another tab, window or sync tool changed your data since this page loaded ({files}). Saving now could erase those changes.",
+      reloadNote: "Reloading drops the change that failed to save.",
+      reloadNoteSession: "Reloading reads the disk again and saves your reading session on top of it.",
+      reloadBtn: "Reload from disk",
+      overwriteBtn: "Overwrite anyway",
+      reloadedToast: "Reloaded from disk. The change that failed to save was not saved.",
+    },
+
     nav: {
       library: "Library",
       stats: "Stats",
@@ -192,6 +202,20 @@ RI.i18n.registerLanguage(
       rateModalQuestion: "How would you rate it?",
       rateModalSkip: "Maybe later",
       nudgeText: "Liked it? Hated it? Rate it.",
+
+      estimateBook_one: "At this pace you will finish in about {n} reading day.",
+      estimateBook_other: "At this pace you will finish in about {n} reading days.",
+      estimateOverall_one: "At your overall pace you would finish in about {n} reading day.",
+      estimateOverall_other: "At your overall pace you would finish in about {n} reading days.",
+
+      fieldDueDate: "Return by",
+      dueDateHint: "Optional. A date in the past shows as overdue.",
+      dueToday: "Return today",
+      dueIn_one: "{n} day left",
+      dueIn_other: "{n} days left",
+      dueOverdue_one: "{n} day overdue",
+      dueOverdue_other: "{n} days overdue",
+      dueTitle: "Return by {date}",
     },
 
     streak: {
@@ -246,6 +270,16 @@ RI.i18n.registerLanguage(
       exportBtn: "Export library as CSV",
       toastExported: "Exported library to CSV.",
       errCouldNotExportPrefix: "Could not export: ",
+      backupBtn: "Back up now",
+      backupRunning: "Backing up…",
+      backupHintBeside: "Backups are saved in the backups folder next to data. To restore one, copy its files back into data by hand.",
+      backupHintInside: "Backups are saved in the backups folder inside data. To restore one, copy its files back into data by hand.",
+      backupLast_one: "Last backup: {date} ({n} file)",
+      backupLast_other: "Last backup: {date} ({n} files)",
+      backupNone: "No backup yet.",
+      toastBackup_one: "Backup saved to backups/{folder}: {n} file.",
+      toastBackup_other: "Backup saved to backups/{folder}: {n} files.",
+      errCouldNotBackupPrefix: "Could not back up: ",
     },
 
     read: {
@@ -291,6 +325,8 @@ RI.i18n.registerLanguage(
       savedSummary_other: 'Logged {n} pages for "{title}".',
       readAnotherSession: "Read another session",
       backToLibrary: "Back to Library",
+      titleMinutes: "{n} min",
+      titleTimeUp: "Time's up",
     },
 
     // static wishlist strings
