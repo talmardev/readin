@@ -188,10 +188,13 @@ RI.boot = function (onReady) {
       const wishlistData = await RI.fs.readWishlist(dataHandle);
       screen.classList.add("hidden");
       appShell.classList.remove("hidden");
-      onReady({ library, dataHandle, coversHandle, rootHandle, ratingsData, wishlistData });
+      await onReady({ library, dataHandle, coversHandle, rootHandle, ratingsData, wishlistData });
       RI.stale.announceReload();
     } catch (err) {
       console.error(err);
+      // show the setup card with the error
+      appShell.classList.add("hidden");
+      screen.classList.remove("hidden");
       showError(t("setup.errCouldNotRead") + (err && err.message ? err.message : ""));
     }
   }

@@ -160,7 +160,11 @@
     return ph;
   }
 
+  // newest render wins, older ones stop
+  let logListRun = 0;
+
   async function renderLogList() {
+    const run = ++logListRun;
     logListCoverUrls.forEach((u) => URL.revokeObjectURL(u));
     logListCoverUrls = [];
     logList.innerHTML = "";
@@ -180,6 +184,10 @@
       let coverEl = null;
       if (book && book.coverFile) {
         const url = await fs.readCoverAsURL(ctx.coversHandle, book.coverFile);
+        if (run !== logListRun) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
         if (url) {
           logListCoverUrls.push(url);
           const img = document.createElement("img");

@@ -120,10 +120,13 @@ RI.i18n = (function () {
     changeListeners.push(cb);
   }
 
-  // custom categories are never translated
+  // custom and renamed categories are never translated
   function categoryName(category) {
     if (!category) return "";
     const key = "category." + category.id;
+    // seeded names equal the English entry until renamed
+    const seededName = lookup(FALLBACK_LANG, key);
+    if (seededName !== undefined && category.name !== seededName) return category.name;
     const translated = t(key);
     return translated === key ? category.name : translated;
   }

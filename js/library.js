@@ -129,12 +129,14 @@
   // wishlist cover the shared input will replace
   let editingWishlistCoverItemId = null;
 
+  // true only when the file was written
   async function persist() {
     try {
-      await RI.stale.run(() => fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library));
+      return await RI.stale.run(() => fs.writeLibraryAndLogs(ctx.dataHandle, ctx.library));
     } catch (err) {
       console.error(err);
       RI.toast(t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
+      return false;
     }
   }
 
@@ -147,12 +149,14 @@
     }
   }
 
+  // true only when the file was written
   async function persistWishlist() {
     try {
-      await RI.stale.run(() => fs.writeWishlist(ctx.dataHandle, ctx.wishlistData));
+      return await RI.stale.run(() => fs.writeWishlist(ctx.dataHandle, ctx.wishlistData));
     } catch (err) {
       console.error(err);
       RI.toast(t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError")), "error");
+      return false;
     }
   }
 
@@ -223,7 +227,11 @@
     shelfSearchInput.focus();
   });
 
+  // newest render wins, older ones stop
+  let renderRun = 0;
+
   async function renderGrid() {
+    const run = ++renderRun;
     renderCategoryFilterRow();
 
     const allBooks = store.sortedBooksForLibrary(ctx.library);
@@ -232,8 +240,16 @@
       : allBooks;
     const books = categoryFiltered.filter((b) => matchesSearch(b, searchQuery));
 
+    // covers load in parallel, shelf swaps once
+    const urls = new Map();
+    const cards = await Promise.all(books.map((book) => buildBookCard(book, urls)));
+    if (run !== renderRun) {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+      return;
+    }
+
     gridCoverUrls.forEach((url) => URL.revokeObjectURL(url));
-    gridCoverUrls = new Map();
+    gridCoverUrls = urls;
     clearAllNudges();
 
     Array.from(grid.querySelectorAll(".book-card:not(.add-book-card)")).forEach((el) => el.remove());
@@ -257,12 +273,9 @@
       ? t("library.subtitleCount", { count: allBooks.length, n: allBooks.length })
       : "";
 
-    for (const book of books) {
-      const card = await buildBookCard(book);
-      grid.appendChild(card);
-    }
+    cards.forEach((card) => grid.appendChild(card));
 
-    await applyRatingNudges(allBooks, books);
+    await applyRatingNudges(allBooks, books, run);
   }
 
   // Ratings: nudge popups and star pickers
@@ -305,73 +318,7 @@
     return row;
   }
 
-  // Star slot: glyph plus two half buttons
-  function buildStarSlot(index, onPick, onPreview) {
-    const slot = document.createElement("span");
-    slot.className = "star-slot";
-    const bg = document.createElement("span");
-    bg.className = "star-bg";
-    bg.textContent = "★";
-    const fg = document.createElement("span");
-    fg.className = "star-fg";
-    fg.textContent = "★";
-    slot.appendChild(bg);
-    slot.appendChild(fg);
-
-    [index - 0.5, index].forEach((value, half) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "star-half " + (half === 0 ? "star-half-lo" : "star-half-hi");
-      btn.setAttribute("aria-label", t("common.starsAria", { count: value, value }));
-      btn.addEventListener("mouseenter", () => onPreview(value));
-      btn.addEventListener("focus", () => onPreview(value));
-      btn.addEventListener("click", () => onPick(value));
-      slot.appendChild(btn);
-    });
-
-    return { slot, fg };
-  }
-
-  // star picker in half steps, reusable
-  function buildStarPicker(container) {
-    container.innerHTML = "";
-    let current = 0;
-    let onPickCb = null;
-    const setters = [];
-
-    function render(value) {
-      setters.forEach((setFraction, idx) => setFraction(store.starFraction(value, idx + 1)));
-    }
-
-    for (let i = 1; i <= 5; i++) {
-      const { slot, fg } = buildStarSlot(
-        i,
-        (value) => {
-          current = value;
-          render(current);
-          if (onPickCb) onPickCb(current);
-        },
-        (value) => render(value)
-      );
-      setters.push((fraction) => {
-        fg.style.width = fraction * 100 + "%";
-      });
-      container.appendChild(slot);
-    }
-
-    container.addEventListener("mouseleave", () => render(current));
-    render(current);
-
-    return {
-      setValue(value) {
-        current = value || 0;
-        render(current);
-      },
-      setOnPick(cb) {
-        onPickCb = cb;
-      },
-    };
-  }
+  const buildStarPicker = RI.stars.buildPicker;
 
   function positionNudge(bubble, cardEl) {
     const rect = cardEl.getBoundingClientRect();
@@ -420,7 +367,7 @@
   }
 
   // nudge once a day, only visible cards
-  async function applyRatingNudges(allBooksList, renderedBooks) {
+  async function applyRatingNudges(allBooksList, renderedBooks, run) {
     let ratingsChanged = false;
     allBooksList.forEach((book) => {
       if (!store.isBookFinished(ctx.library, book)) return;
@@ -439,6 +386,7 @@
     }
 
     if (ratingsChanged) await persistRatings();
+    if (run !== renderRun) return;
 
     toNudge.forEach((book) => {
       const cardEl = grid.querySelector(`.book-card[data-book-id="${book.id}"]`);
@@ -471,7 +419,7 @@
     return pill;
   }
 
-  async function buildBookCard(book) {
+  async function buildBookCard(book, urls) {
     const progress = store.progressForBook(ctx.library, book);
     const readToday = store.hasLogToday(ctx.library, book.id);
 
@@ -486,7 +434,7 @@
 
     const url = await resolveCoverUrl(book);
     if (url) {
-      gridCoverUrls.set(book.id, url);
+      urls.set(book.id, url);
       const img = document.createElement("img");
       img.src = url;
       img.alt = "";
@@ -1031,17 +979,22 @@
       await olBookSearch.whenIdle();
       if (editingBookId) {
         const book = store.getBookById(ctx.library, editingBookId);
-        if (pendingCoverRemoved && book.coverFile) {
-          await fs.deleteCover(ctx.coversHandle, book.coverFile);
-          store.updateBook(ctx.library, editingBookId, { coverFile: null });
-        }
+        // kept to undo a failed save
+        const before = { ...book };
+        if (pendingCoverRemoved) store.updateBook(ctx.library, editingBookId, { coverFile: null });
         if (pendingCoverFile) {
-          const oldCover = book.coverFile;
           const newPath = await fs.saveCover(ctx.coversHandle, editingBookId, pendingCoverFile);
-          if (oldCover && oldCover !== newPath) await fs.deleteCover(ctx.coversHandle, oldCover);
           store.updateBook(ctx.library, editingBookId, { coverFile: newPath });
         }
         store.updateBook(ctx.library, editingBookId, { title, author, totalPages, isbn, ownership, dueDate, categoryIds });
+        if (!(await persist())) {
+          Object.assign(book, before);
+          return;
+        }
+        // old file goes only after the save worked
+        if (before.coverFile && before.coverFile !== book.coverFile) {
+          await fs.deleteCover(ctx.coversHandle, before.coverFile);
+        }
       } else {
         const book = store.createBook(ctx.library, {
           title,
@@ -1057,15 +1010,23 @@
           const path = await fs.saveCover(ctx.coversHandle, book.id, pendingCoverFile);
           store.updateBook(ctx.library, book.id, { coverFile: path });
         }
-      }
-      await persist();
-      if (!editingBookId && convertingWishlistItemId) {
-        const removedWishlistItem = store.deleteWishlistItem(ctx.wishlistData, convertingWishlistItemId);
-        if (removedWishlistItem && removedWishlistItem.coverFile) {
-          await fs.deleteCover(ctx.coversHandle, removedWishlistItem.coverFile);
+        if (!(await persist())) {
+          // drop the unsaved book
+          store.deleteBook(ctx.library, book.id);
+          if (book.coverFile) await fs.deleteCover(ctx.coversHandle, book.coverFile);
+          return;
         }
-        await persistWishlist();
-        await renderWishlistPanel();
+        if (convertingWishlistItemId) {
+          const removedWishlistItem = store.deleteWishlistItem(ctx.wishlistData, convertingWishlistItemId);
+          if (removedWishlistItem) {
+            if (await persistWishlist()) {
+              if (removedWishlistItem.coverFile) await fs.deleteCover(ctx.coversHandle, removedWishlistItem.coverFile);
+            } else {
+              ctx.wishlistData.items.push(removedWishlistItem);
+            }
+          }
+          await renderWishlistPanel();
+        }
       }
       closeBookModal();
       await renderGrid();
@@ -1084,9 +1045,15 @@
     const ok = confirm(t("library.confirmDeleteBook", { title: book.title }));
     if (!ok) return;
     try {
-      if (book.coverFile) await fs.deleteCover(ctx.coversHandle, book.coverFile);
+      // restores the book if save fails
+      const snapshot = { books: ctx.library.books.slice(), logs: ctx.library.logs.slice() };
       store.deleteBook(ctx.library, editingBookId);
-      await persist();
+      if (!(await persist())) {
+        ctx.library.books = snapshot.books;
+        ctx.library.logs = snapshot.logs;
+        return;
+      }
+      if (book.coverFile) await fs.deleteCover(ctx.coversHandle, book.coverFile);
       closeBookModal();
       await renderGrid();
     } catch (err) {
@@ -1287,8 +1254,12 @@
     }
   });
 
+  // blocks a second save while one is writing
+  let savingLog = false;
+
   logForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (savingLog) return;
     const pages = Number(logPagesInput.value);
     if (!pages || pages < 1) {
       logFormError.textContent = logLastEditedStopped
@@ -1314,9 +1285,14 @@
     }
     logFormError.textContent = "";
 
+    savingLog = true;
     try {
-      store.addLog(ctx.library, { bookId: logModalBookId, pagesRead: pages, date, isPastRead });
-      await persist();
+      const log = store.addLog(ctx.library, { bookId: logModalBookId, pagesRead: pages, date, isPastRead });
+      if (!(await persist())) {
+        // form stays filled for a retry
+        store.deleteLog(ctx.library, log.id);
+        return;
+      }
       const book = store.getBookById(ctx.library, logModalBookId);
       await renderLogModalBookInfo(book);
       const { finished } = applyRemainingPagesState(book);
@@ -1346,6 +1322,8 @@
     } catch (err) {
       console.error(err);
       logFormError.textContent = t("common.couldNotSavePrefix") + (err && err.message ? err.message : t("common.unknownError"));
+    } finally {
+      savingLog = false;
     }
   });
 
@@ -1390,7 +1368,11 @@
 
   // Wishlist corner panel
 
+  // newest render wins, older ones stop
+  let wishlistRenderRun = 0;
+
   async function renderWishlistPanel() {
+    const run = ++wishlistRenderRun;
     const items = store.sortedWishlistItems(ctx.wishlistData);
     wishlistCount.textContent = String(items.length);
     wishlistCount.classList.toggle("hidden", items.length === 0);
@@ -1415,6 +1397,10 @@
       coverWrap.className = "wishlist-grid-cover-wrap";
 
       const coverUrl = await resolveCoverUrl(item);
+      if (run !== wishlistRenderRun) {
+        if (coverUrl) URL.revokeObjectURL(coverUrl);
+        return;
+      }
       let coverEl;
       if (coverUrl) {
         wishlistCoverUrls.set(item.id, coverUrl);
@@ -1446,9 +1432,13 @@
         removeCoverBtn.innerHTML = "&times;";
         removeCoverBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
-          await fs.deleteCover(ctx.coversHandle, item.coverFile);
+          const oldCover = item.coverFile;
           store.updateWishlistItem(ctx.wishlistData, item.id, { coverFile: null });
-          await persistWishlist();
+          if (!(await persistWishlist())) {
+            store.updateWishlistItem(ctx.wishlistData, item.id, { coverFile: oldCover });
+            return;
+          }
+          await fs.deleteCover(ctx.coversHandle, oldCover);
           await renderWishlistPanel();
         });
         coverWrap.appendChild(removeCoverBtn);
@@ -1509,9 +1499,13 @@
       removeBtn.setAttribute("aria-label", t("wishlist.removeAria", { title: item.title }));
       removeBtn.innerHTML = TRASH_SVG;
       removeBtn.addEventListener("click", async () => {
-        if (item.coverFile) await fs.deleteCover(ctx.coversHandle, item.coverFile);
-        store.deleteWishlistItem(ctx.wishlistData, item.id);
-        await persistWishlist();
+        const removed = store.deleteWishlistItem(ctx.wishlistData, item.id);
+        if (!removed) return;
+        if (!(await persistWishlist())) {
+          ctx.wishlistData.items.push(removed);
+          return;
+        }
+        if (removed.coverFile) await fs.deleteCover(ctx.coversHandle, removed.coverFile);
         await renderWishlistPanel();
       });
       actions.appendChild(removeBtn);
@@ -1616,9 +1610,13 @@
     try {
       const oldCover = item.coverFile;
       const newPath = await fs.saveCover(ctx.coversHandle, itemId, file);
-      if (oldCover && oldCover !== newPath) await fs.deleteCover(ctx.coversHandle, oldCover);
       store.updateWishlistItem(ctx.wishlistData, itemId, { coverFile: newPath });
-      await persistWishlist();
+      if (!(await persistWishlist())) {
+        store.updateWishlistItem(ctx.wishlistData, itemId, { coverFile: oldCover });
+        return;
+      }
+      // old file goes only after the save worked
+      if (oldCover && oldCover !== newPath) await fs.deleteCover(ctx.coversHandle, oldCover);
       await renderWishlistPanel();
     } catch (err) {
       console.error(err);
@@ -1651,7 +1649,12 @@
         const path = await fs.saveCover(ctx.coversHandle, item.id, pendingWishlistCoverFile);
         store.updateWishlistItem(ctx.wishlistData, item.id, { coverFile: path });
       }
-      await persistWishlist();
+      if (!(await persistWishlist())) {
+        // drop the unsaved entry and its cover
+        store.deleteWishlistItem(ctx.wishlistData, item.id);
+        if (item.coverFile) await fs.deleteCover(ctx.coversHandle, item.coverFile);
+        return;
+      }
       wishlistForm.reset();
       pendingWishlistCoverFile = null;
       pendingWishlistHints = null;

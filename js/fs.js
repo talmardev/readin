@@ -242,8 +242,10 @@ RI.fs = (function () {
     const text = await readJsonText(dataHandle, LIBRARY_FILE);
     if (text === null) {
       const fresh = RI.store.createDefaultLibrary();
+      // logs outliving library.json must not be erased
+      const { logs: keptLogs } = await readLogs(dataHandle);
       await writeLibrary(dataHandle, fresh);
-      return { library: { books: fresh.books, categories: fresh.categories }, logs: [] };
+      return { library: { books: fresh.books, categories: fresh.categories }, logs: keptLogs };
     }
     if (text.trim()) rawParsed = JSON.parse(text);
 
