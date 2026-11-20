@@ -30,6 +30,8 @@ RI.i18n.registerLanguage(
       chooseDifferentFolderBtn: "Choose a different folder",
       errCouldNotRead: "Could not read your data folder. ",
       errCouldNotAccess: "Could not access that folder. ",
+      errPickerClosed:
+        "The folder picker closed without a folder. If you chose one, allow editing files when your browser asks.",
       errAccessNotGranted: "Access was not granted, so readin' cannot load your library.",
       errRequestFailed: "Something went wrong requesting access. ",
       unsupportedTitle: "Browser not supported",

@@ -74,12 +74,22 @@ RI.fs = (function () {
     return idbGet(HANDLE_KEY);
   }
 
+  // rejects when a browser call never answers
+  function withTimeout(promise, ms, label) {
+    let timer;
+    const timeout = new Promise((resolve, reject) => {
+      timer = setTimeout(() => reject(new Error("Timed out: " + label)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  }
+
   async function pickRootFolder() {
     const handle = await window.showDirectoryPicker({
       mode: "readwrite",
       id: "readin-project-root",
     });
-    await idbSet(HANDLE_KEY, handle);
+    // saving the handle is optional, never block
+    await withTimeout(idbSet(HANDLE_KEY, handle), 5000, "saving the folder").catch((err) => console.error(err));
     return handle;
   }
 
@@ -534,6 +544,7 @@ RI.fs = (function () {
     isSupported,
     isBrave,
     getStoredRootHandle,
+    withTimeout,
     pickRootFolder,
     forgetRootFolder,
     queryPermission,

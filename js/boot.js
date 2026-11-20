@@ -179,13 +179,16 @@ RI.boot = function (onReady) {
     altBtn.classList.remove("hidden");
   }
 
+  // hung disk calls must end in errors
+  const step = (promise, label) => RI.fs.withTimeout(promise, 20000, label);
+
   async function proceedWithRoot(rootHandle) {
     try {
-      const { dataHandle, coversHandle } = await RI.fs.ensureDataDirs(rootHandle);
-      const { library: libraryBase, logs } = await RI.fs.readLibraryAndLogs(dataHandle);
+      const { dataHandle, coversHandle } = await step(RI.fs.ensureDataDirs(rootHandle), "opening the data folder");
+      const { library: libraryBase, logs } = await step(RI.fs.readLibraryAndLogs(dataHandle), "reading library.json");
       const library = { books: libraryBase.books, categories: libraryBase.categories, logs };
-      const ratingsData = await RI.fs.readRatings(dataHandle);
-      const wishlistData = await RI.fs.readWishlist(dataHandle);
+      const ratingsData = await step(RI.fs.readRatings(dataHandle), "reading ratings.json");
+      const wishlistData = await step(RI.fs.readWishlist(dataHandle), "reading wishlist.json");
       screen.classList.add("hidden");
       appShell.classList.remove("hidden");
       await onReady({ library, dataHandle, coversHandle, rootHandle, ratingsData, wishlistData });
@@ -195,6 +198,8 @@ RI.boot = function (onReady) {
       // show the setup card with the error
       appShell.classList.add("hidden");
       screen.classList.remove("hidden");
+      // the loading card has no buttons
+      if (!currentSetupState) setStateSetup();
       showError(t("setup.errCouldNotRead") + (err && err.message ? err.message : ""));
     }
   }
@@ -205,7 +210,10 @@ RI.boot = function (onReady) {
       const rootHandle = await RI.fs.pickRootFolder();
       await proceedWithRoot(rootHandle);
     } catch (err) {
-      if (err && err.name === "AbortError") return;
+      if (err && err.name === "AbortError") {
+        showError(t("setup.errPickerClosed"));
+        return;
+      }
       console.error(err);
       showError(t("setup.errCouldNotAccess") + (err && err.message ? err.message : ""));
     }
@@ -254,25 +262,28 @@ RI.boot = function (onReady) {
       return;
     }
 
-    let rootHandle;
+    let rootHandle = null;
+    let problem = null;
     try {
-      rootHandle = await RI.fs.getStoredRootHandle();
+      rootHandle = await RI.fs.withTimeout(RI.fs.getStoredRootHandle(), 5000, "reading the saved folder");
     } catch (err) {
       console.error(err);
-      rootHandle = null;
+      problem = err;
     }
 
     if (!rootHandle) {
       setStateSetup();
+      if (problem) showError(t("setup.errCouldNotAccess") + problem.message);
       return;
     }
 
     let perm;
     try {
-      perm = await RI.fs.queryPermission(rootHandle);
+      perm = await RI.fs.withTimeout(RI.fs.queryPermission(rootHandle), 5000, "checking folder access");
     } catch (err) {
       console.error(err);
       setStateSetup();
+      showError(t("setup.errCouldNotAccess") + (err && err.message ? err.message : ""));
       return;
     }
 

@@ -30,6 +30,8 @@ RI.i18n.registerLanguage(
       chooseDifferentFolderBtn: "Anderen Ordner auswählen",
       errCouldNotRead: "Dein Datenordner konnte nicht gelesen werden. ",
       errCouldNotAccess: "Auf diesen Ordner konnte nicht zugegriffen werden. ",
+      errPickerClosed:
+        "Die Ordnerauswahl wurde ohne Ordner geschlossen. Falls du einen gewählt hast, erlaube das Bearbeiten von Dateien, wenn dein Browser nachfragt.",
       errAccessNotGranted: "Der Zugriff wurde nicht gewährt, deshalb kann readin' deine Bibliothek nicht laden.",
       errRequestFailed: "Beim Anfordern des Zugriffs ist etwas schiefgelaufen. ",
       unsupportedTitle: "Browser nicht unterstützt",

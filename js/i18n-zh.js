@@ -30,6 +30,7 @@ RI.i18n.registerLanguage(
       chooseDifferentFolderBtn: "选择其他文件夹",
       errCouldNotRead: "无法读取你的数据文件夹。",
       errCouldNotAccess: "无法访问该文件夹。",
+      errPickerClosed: "文件夹选择器关闭了，但没有选中文件夹。如果你选了一个，请在浏览器询问时允许编辑文件。",
       errAccessNotGranted: "未授予访问权限，所以 readin' 无法加载你的书库。",
       errRequestFailed: "请求访问权限时出了问题。",
       unsupportedTitle: "不支持此浏览器",

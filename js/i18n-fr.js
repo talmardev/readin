@@ -30,6 +30,8 @@ RI.i18n.registerLanguage(
       chooseDifferentFolderBtn: "Choisir un autre dossier",
       errCouldNotRead: "Impossible de lire ton dossier de données. ",
       errCouldNotAccess: "Impossible d'accéder à ce dossier. ",
+      errPickerClosed:
+        "Le sélecteur de dossier s'est fermé sans dossier. Si tu en as choisi un, autorise la modification des fichiers quand ton navigateur le demande.",
       errAccessNotGranted: "L'accès n'a pas été autorisé, donc readin' ne peut pas charger ta bibliothèque.",
       errRequestFailed: "Une erreur est survenue lors de la demande d'accès. ",
       unsupportedTitle: "Navigateur non pris en charge",

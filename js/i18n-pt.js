@@ -30,6 +30,8 @@ RI.i18n.registerLanguage(
       chooseDifferentFolderBtn: "Escolher outra pasta",
       errCouldNotRead: "Não foi possível ler a tua pasta de dados. ",
       errCouldNotAccess: "Não foi possível aceder a essa pasta. ",
+      errPickerClosed:
+        "O seletor de pastas fechou sem nenhuma pasta. Se escolheste uma, permite a edição de ficheiros quando o browser perguntar.",
       errAccessNotGranted: "O acesso não foi concedido, por isso a readin' não consegue carregar a tua biblioteca.",
       errRequestFailed: "Algo correu mal ao pedir acesso. ",
       unsupportedTitle: "Navegador não suportado",

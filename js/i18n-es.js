@@ -30,6 +30,8 @@ RI.i18n.registerLanguage(
       chooseDifferentFolderBtn: "Elegir otra carpeta",
       errCouldNotRead: "No se pudo leer tu carpeta de datos. ",
       errCouldNotAccess: "No se pudo acceder a esa carpeta. ",
+      errPickerClosed:
+        "El selector de carpetas se cerró sin ninguna carpeta. Si elegiste una, permite la edición de archivos cuando el navegador lo pida.",
       errAccessNotGranted: "No se concedió el acceso, así que readin' no puede cargar tu biblioteca.",
       errRequestFailed: "Algo salió mal al solicitar el acceso. ",
       unsupportedTitle: "Navegador no compatible",
